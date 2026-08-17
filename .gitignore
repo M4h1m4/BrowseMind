@@ -4,3 +4,7 @@ dist/
 db/artifacts.db
 evidence/runs/*.json
 evidence/runs/*.png
+
+# Planning documents — local only
+*.md
+*.docx
