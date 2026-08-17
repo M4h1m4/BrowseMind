@@ -3,6 +3,11 @@ import { app } from '../../../src/app'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
 import { resetRuns } from '../../../src/api/routes'
 
+// Prevent the capture route from launching a real browser or calling the LLM
+jest.mock('../../../src/agent/discovery', () => ({
+  runDiscovery: jest.fn().mockResolvedValue(undefined)
+}))
+
 beforeEach(() => {
   setupTestDb()
   resetRuns()

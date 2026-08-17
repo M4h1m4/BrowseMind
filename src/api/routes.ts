@@ -8,6 +8,7 @@ import {
   RunStatusResponse
 } from '../types'
 import { findArtifactById, findArtifactsByTenant, deleteArtifact } from '../artifact/repository'
+import { runDiscovery } from '../agent/discovery'
 
 export const router = Router()
 
@@ -52,8 +53,11 @@ router.post('/capture/run', (req: Request, res: Response) => {
 
   runs.set(runId, state)
 
-  // TODO Phase 2: kick off discovery agent here
-  console.log(`[capture] run ${runId} created — goal: "${goal}" — targetApp: ${targetApp}`)
+  // Fire and forget — discovery runs in background, updates state as it goes
+  runDiscovery(state, goal, targetApp, tenantId).catch(err => {
+    state.status = 'failed'
+    console.error(`[capture] run ${runId} failed unexpectedly:`, err)
+  })
 
   res.status(202).json({ runId, status: 'running' })
 })

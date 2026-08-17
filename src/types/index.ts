@@ -107,8 +107,9 @@ export interface RunLog {
 // ─── LLM Function Call Schema ─────────────────────────────────────────────────
 
 export interface LLMAction {
-  checkpointForPreviousStep: Checkpoint | null   // null on step 1
+  checkpointForPreviousStep: Checkpoint | null        // null on step 1
   action:                    ActionType
+  coordinates?:              { x: number; y: number } // pixel coords in 1280x720 screenshot — required for click and scroll
   targetDescription:         string
   value:                     string | null
   reasoning:                 string
