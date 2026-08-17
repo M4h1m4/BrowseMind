@@ -14,6 +14,10 @@ export const router = Router()
 // In-memory run state — keyed by runId
 const runs = new Map<string, RunState>()
 
+export function resetRuns(): void {
+  runs.clear()
+}
+
 // ─── Capture ──────────────────────────────────────────────────────────────────
 
 router.post('/capture/run', (req: Request, res: Response) => {

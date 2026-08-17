@@ -2,17 +2,27 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 
-const DB_PATH = path.join(process.cwd(), 'db', 'artifacts.db')
+const DEFAULT_DB_PATH = path.join(process.cwd(), 'db', 'artifacts.db')
 
-let db: Database.Database
+let db: Database.Database | null = null
 
 export function getDb(): Database.Database {
   if (!db) {
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
-    db = new Database(DB_PATH)
+    const dbPath = process.env.DATABASE_PATH ?? DEFAULT_DB_PATH
+    if (dbPath !== ':memory:') {
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+    }
+    db = new Database(dbPath)
     db.pragma('journal_mode = WAL')
   }
   return db
+}
+
+export function closeDb(): void {
+  if (db) {
+    db.close()
+    db = null
+  }
 }
 
 export function initDb(): void {
