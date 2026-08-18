@@ -94,6 +94,10 @@ export async function runReplay(
             const located = await locateElement(page, step.elementData)
             strategyUsed  = located.strategy
 
+            if (!located.foundByLocator) {
+              throw new Error(`Could not locate element — all named strategies exhausted, coordinate fallback used`)
+            }
+
             if (step.actionType === 'click') {
               await page.mouse.click(located.x, located.y)
 
@@ -244,6 +248,9 @@ export async function runReplay(
           } else {
             const located = await locateElement(page, step.elementData)
             strategyUsed  = located.strategy
+            if (!located.foundByLocator) {
+              throw new Error(`Could not locate element — all named strategies exhausted, coordinate fallback used`)
+            }
             if (step.actionType === 'click') {
               await page.mouse.click(located.x, located.y)
             } else if (step.actionType === 'input') {

@@ -69,7 +69,7 @@ jest.mock('../../../src/agent/logger', () => ({ writeRunLog: jest.fn() }))
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const LOCATE_SUCCESS = { strategy: 'primary' as const, x: 50, y: 100 }
+const LOCATE_SUCCESS = { strategy: 'primary' as const, x: 50, y: 100, foundByLocator: true }
 const LOCATE_FAIL    = new Error('Could not locate element: Submit')
 
 function makeRunState(runId = 'stuck-run-001'): RunState {
