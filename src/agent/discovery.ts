@@ -89,7 +89,8 @@ export async function runDiscovery(
         endTime:             new Date().toISOString(),
         retryCount:          0,
         status:              'success',
-        elementStrategyUsed: 'primary'
+        elementStrategyUsed: 'primary',
+        sensitive:           false   // discovery steps classified sensitive at build time in builder.ts
       })
 
       // 10. Goal complete
