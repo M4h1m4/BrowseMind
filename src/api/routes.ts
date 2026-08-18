@@ -9,6 +9,7 @@ import {
 } from '../types'
 import { findArtifactById, findArtifactsByTenant, deleteArtifact } from '../artifact/repository'
 import { runDiscovery } from '../agent/discovery'
+import { runReplay } from '../replay/replay'
 
 export const router = Router()
 
@@ -104,8 +105,10 @@ router.post('/replay/run', (req: Request, res: Response) => {
 
   runs.set(runId, state)
 
-  // TODO Phase 3: kick off replay engine here
-  console.log(`[replay] run ${runId} created — artifactId: ${artifactId}`)
+  runReplay(state, artifact, inputs ?? {}).catch(err => {
+    state.status = 'failed'
+    console.error(`[replay] run ${runId} failed unexpectedly:`, err)
+  })
 
   res.status(202).json({ runId, status: 'running' })
 })

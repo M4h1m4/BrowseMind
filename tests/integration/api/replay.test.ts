@@ -1,3 +1,7 @@
+jest.mock('../../../src/replay/replay', () => ({
+  runReplay: jest.fn().mockResolvedValue(undefined)
+}))
+
 import request from 'supertest'
 import { app } from '../../../src/app'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
