@@ -10,6 +10,7 @@ import {
 import { findArtifactById, findArtifactsByTenant, deleteArtifact } from '../artifact/repository'
 import { runDiscovery } from '../agent/discovery'
 import { runReplay } from '../replay/replay'
+import { signalResume } from '../session/resumeSignal'
 
 export const router = Router()
 
@@ -143,20 +144,22 @@ router.post('/runs/:runId/resume', (req: Request, res: Response) => {
     return
   }
 
-  if (!state.isPaused) {
-    res.status(400).json({ error: 'run is not paused' })
-    return
-  }
-
   const { humanNotes } = req.body as ResumeRunRequest
 
-  state.isPaused = false
-  state.status = 'running'
+  if (signalResume(state.runId)) {
+    // Discovery loop was waiting for human login — it will handle its own status transitions
+  } else {
+    // No pending signal — plain confirmation resume (e.g. destructive action confirmation)
+    if (!state.isPaused) {
+      res.status(400).json({ error: 'run is not paused' })
+      return
+    }
+    state.isPaused = false
+    state.status   = 'running'
+  }
+
   state.interventionRequest = undefined
-
-  // TODO Phase 7: signal the paused agent/replay loop to resume
-  console.log(`[handoff] run ${state.runId} resumed — notes: "${humanNotes}"`)
-
+  console.log(`[handoff] run ${state.runId} resumed — notes: "${humanNotes ?? ''}"`)
   res.json({ status: 'resumed', resumedAt: new Date().toISOString() })
 })
 

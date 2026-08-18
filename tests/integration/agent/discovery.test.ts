@@ -2,6 +2,7 @@ import { runDiscovery } from '../../../src/agent/discovery'
 import { RunState } from '../../../src/types'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
 import { findArtifactsByTenant } from '../../../src/artifact/repository'
+import { cancelResume, resetSignals } from '../../../src/session/resumeSignal'
 
 // ─── Mock Playwright ──────────────────────────────────────────────────────────
 // jest.mock is hoisted — define everything inside the factory to avoid
@@ -98,6 +99,7 @@ const clickAction = {
 
 beforeEach(() => {
   setupTestDb()
+  resetSignals()
   jest.clearAllMocks()
 })
 
@@ -142,14 +144,22 @@ describe('runDiscovery', () => {
     expect(artifacts[0].steps).toHaveLength(2)
   })
 
-  it('pauses and sets login_required when LLM signals requiresLogin', async () => {
+  it('pauses run as login_required when LLM signals requiresLogin, then fails if credentials are not supplied', async () => {
     mockCallLLM.mockResolvedValueOnce({ ...clickAction, requiresLogin: true })
 
     const state = makeRunState()
+    let statusWhilePaused = ''
+
+    // Cancel the pending resume shortly after the loop pauses — simulates an abandoned run
+    setTimeout(() => {
+      statusWhilePaused = state.status   // captured just before cancellation
+      cancelResume(state.runId)
+    }, 20)
+
     await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
 
-    expect(state.status).toBe('login_required')
-    expect(state.isPaused).toBe(true)
+    expect(statusWhilePaused).toBe('login_required')
+    expect(state.status).toBe('failed')
   })
 
   it('sets status to failed and records error when an exception is thrown', async () => {

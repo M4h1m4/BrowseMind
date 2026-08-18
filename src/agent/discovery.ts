@@ -7,6 +7,8 @@ import { extractElementData } from './extractor'
 import { ArtifactBuilder } from './builder'
 import { saveArtifact } from '../artifact/repository'
 import { writeRunLog } from './logger'
+import { waitForResume } from '../session/resumeSignal'
+import { captureAndStoreAuthState } from '../session/loginHandler'
 
 const MAX_STEPS  = parseInt(process.env.MAX_STEPS_CAPTURE ?? '25')
 const CTX_WINDOW = 10
@@ -23,8 +25,8 @@ export async function runDiscovery(
 
   try {
     browser = await chromium.launch({ headless: false })
-    const context = await browser.newContext()
-    const page    = await context.newPage()
+    const context  = await browser.newContext()
+    const page     = await context.newPage()
 
     await page.setViewportSize({ width: 1280, height: 720 })
     await page.goto(targetApp, { waitUntil: 'networkidle' })
@@ -55,12 +57,23 @@ export async function runDiscovery(
       updatedSummary       = action.updatedSummary
       runState.currentStep = stepNumber
 
-      // 4. Login required — pause (session management wired in Phase 6)
+      // 4. Login required — pause and wait for credentials via resume endpoint
       if (action.requiresLogin) {
         runState.status   = 'login_required'
         runState.isPaused = true
-        console.log(`[discovery] login required at step ${stepNumber} — pausing`)
-        break
+        console.log(`[discovery] login required at step ${stepNumber} — please log in manually in the browser and call POST /api/v1/runs/{runId}/resume`)
+
+        await waitForResume(runState.runId)
+
+        runState.status   = 'running'
+        runState.isPaused = false
+
+        // Wait for post-login navigation to settle before capturing session
+        await page.waitForTimeout(3000)
+        await captureAndStoreAuthState(context, page, targetApp)
+
+        // Re-loop: take fresh screenshot and ask LLM what to do next
+        continue
       }
 
       console.log(
@@ -70,9 +83,23 @@ export async function runDiscovery(
       // 5. Execute action
       await executeAction(page, action)
 
+      // Allow any triggered navigation to settle before DOM extraction
+      await page.waitForTimeout(800)
+
       // 6. DOM extraction at action coordinates
-      const coords      = action.coordinates ?? { x: 640, y: 360 }
-      const elementData = await extractElementData(page, coords.x, coords.y)
+      const coords = action.coordinates ?? { x: 640, y: 360 }
+      let elementData
+      try {
+        elementData = await extractElementData(page, coords.x, coords.y)
+      } catch {
+        // Page navigated during extraction — use coordinate fallback
+        elementData = {
+          primary:   { type: 'aria-label',   value: '' },
+          secondary: { type: 'placeholder',  value: '' },
+          tertiary:  { type: 'text-content', value: '' },
+          fallback:  { type: 'coordinates' as const, value: coords }
+        }
+      }
 
       // 7. Accumulate step in artifact builder
       builder.addStep(action, elementData, stepNumber)
