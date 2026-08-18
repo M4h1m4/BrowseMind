@@ -68,6 +68,8 @@ export async function runDiscovery(
         runState.status   = 'running'
         runState.isPaused = false
 
+        // Wait for post-login navigation to settle before capturing session
+        await page.waitForTimeout(3000)
         await captureAndStoreAuthState(context, page, targetApp)
 
         // Re-loop: take fresh screenshot and ask LLM what to do next
@@ -81,9 +83,23 @@ export async function runDiscovery(
       // 5. Execute action
       await executeAction(page, action)
 
+      // Allow any triggered navigation to settle before DOM extraction
+      await page.waitForTimeout(800)
+
       // 6. DOM extraction at action coordinates
-      const coords      = action.coordinates ?? { x: 640, y: 360 }
-      const elementData = await extractElementData(page, coords.x, coords.y)
+      const coords = action.coordinates ?? { x: 640, y: 360 }
+      let elementData
+      try {
+        elementData = await extractElementData(page, coords.x, coords.y)
+      } catch {
+        // Page navigated during extraction — use coordinate fallback
+        elementData = {
+          primary:   { type: 'aria-label',   value: '' },
+          secondary: { type: 'placeholder',  value: '' },
+          tertiary:  { type: 'text-content', value: '' },
+          fallback:  { type: 'coordinates' as const, value: coords }
+        }
+      }
 
       // 7. Accumulate step in artifact builder
       builder.addStep(action, elementData, stepNumber)
