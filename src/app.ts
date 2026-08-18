@@ -1,10 +1,18 @@
+import path from 'path'
 import express, { Request, Response } from 'express'
 import { router } from './api/routes'
 import { errorHandler } from './api/middleware/errorHandler'
+import { operatorRouter } from './operator/ui'
 
 export const app = express()
 app.use(express.json())
 app.use('/api/v1', router)
+
+// Serve screenshots and other evidence files statically
+app.use('/evidence', express.static(path.join(process.cwd(), 'evidence')))
+
+// Operator UI
+app.use('/operator', operatorRouter)
 
 // 404 for any route not matched above
 app.use((req: Request, res: Response) => {

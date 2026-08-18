@@ -11,6 +11,7 @@ import { findArtifactById, findArtifactsByTenant, deleteArtifact } from '../arti
 import { runDiscovery } from '../agent/discovery'
 import { runReplay } from '../replay/replay'
 import { signalResume } from '../session/resumeSignal'
+import { signalHandoff } from '../session/handoffSignal'
 
 export const router = Router()
 
@@ -146,10 +147,12 @@ router.post('/runs/:runId/resume', (req: Request, res: Response) => {
 
   const { humanNotes } = req.body as ResumeRunRequest
 
-  if (signalResume(state.runId)) {
-    // Discovery loop was waiting for human login — it will handle its own status transitions
+  // Try stuck handoff first, then login_required signal, then plain pause flip
+  if (signalHandoff(state.runId, humanNotes ?? '')) {
+    // Replay loop was waiting after being stuck — it handles its own state transitions
+  } else if (signalResume(state.runId)) {
+    // Discovery loop was waiting for human login
   } else {
-    // No pending signal — plain confirmation resume (e.g. destructive action confirmation)
     if (!state.isPaused) {
       res.status(400).json({ error: 'run is not paused' })
       return
@@ -171,9 +174,12 @@ router.post('/runs/:runId/takeover', (req: Request, res: Response) => {
     res.status(404).json({ error: `run ${req.params.runId} not found` })
     return
   }
-
-  console.log(`[handoff] human took over run ${state.runId}`)
-  res.json({ status: 'human_in_control' })
+  if (!state.isPaused) {
+    res.status(400).json({ error: 'run is not paused or stuck' })
+    return
+  }
+  console.log(`[handoff] human took over run ${state.runId} at step ${state.currentStep}`)
+  res.json({ status: 'human_in_control', runId: state.runId, currentStep: state.currentStep })
 })
 
 // ─── Artifacts ────────────────────────────────────────────────────────────────

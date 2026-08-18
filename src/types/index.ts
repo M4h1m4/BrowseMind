@@ -80,15 +80,17 @@ export interface RunError {
 }
 
 export interface RunStepLog {
-  stepNumber:          number
-  startTime:           string
-  endTime:             string
-  retryCount:          number
-  status:              StepStatus
-  elementStrategyUsed: ElementStrategy
-  sensitive:           boolean
-  screenshotPath?:     string        // only on failure, never written when sensitive: true
-  errorDetails?:       string        // redacted when sensitive: true
+  stepNumber:           number
+  startTime:            string
+  endTime:              string
+  retryCount:           number
+  status:               StepStatus
+  elementStrategyUsed:  ElementStrategy
+  sensitive:            boolean
+  screenshotPath?:      string        // only on failure, never written when sensitive: true
+  afterScreenshotPath?: string        // screenshot after human handoff
+  humanNotes?:          string        // notes from human after escalation
+  errorDetails?:        string        // redacted when sensitive: true
 }
 
 export interface RunLog {
