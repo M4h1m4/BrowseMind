@@ -8,6 +8,10 @@
  * Subsequent phases will add capture → artifact → replay as the full E2E expands.
  */
 
+jest.mock('../../src/replay/replay', () => ({
+  runReplay: jest.fn().mockResolvedValue(undefined)
+}))
+
 import request from 'supertest'
 import { app } from '../../src/app'
 import { setupTestDb, teardownTestDb } from '../helpers/db'
