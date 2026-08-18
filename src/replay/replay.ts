@@ -2,6 +2,7 @@ import { chromium, Browser } from 'playwright'
 import { RunState, Artifact, ElementStrategy } from '../types'
 import { locateElement } from './elementLocator'
 import { verifyCheckpoint } from './checkpointVerifier'
+import { classifyAction, isAllowedDomain } from './guardrails'
 import { writeRunLog } from '../agent/logger'
 
 export async function runReplay(
@@ -22,6 +23,29 @@ export async function runReplay(
     for (const step of artifact.steps) {
       runState.currentStep = step.stepNumber
 
+      // ── Guardrail: action classification ─────────────────────────────────────
+      const actionClass = classifyAction(step.actionType, step.description)
+
+      if (actionClass === 'write' && !artifact.allowWrites) {
+        runState.status    = 'failed'
+        runState.log.error = {
+          step:     step.stepNumber,
+          expected: 'read-only action (allowWrites is false)',
+          observed: `write action "${step.actionType}" on "${step.description}" blocked`,
+          type:     'hard_failure'
+        }
+        console.log(`[replay] write blocked at step ${step.stepNumber} — allowWrites is false`)
+        return
+      }
+
+      if (actionClass === 'destructive') {
+        runState.status   = 'confirmation_required'
+        runState.isPaused = true
+        console.log(`[replay] destructive action at step ${step.stepNumber} — pausing for confirmation`)
+        return
+      }
+
+      // ── Retry loop ────────────────────────────────────────────────────────────
       let succeeded       = false
       let lastError       = ''
       let strategyUsed: ElementStrategy = 'primary'
@@ -32,6 +56,10 @@ export async function runReplay(
           const value = resolveValue(step.value, inputs)
 
           if (step.actionType === 'navigate') {
+            // Pre-check: validate navigate target stays within the allowed domain
+            if (value && !isAllowedDomain(value, artifact.targetApp)) {
+              throw new Error(`Navigation to external domain blocked: ${value}`)
+            }
             await page.goto(value ?? '', { waitUntil: 'domcontentloaded' })
 
           } else if (step.actionType === 'wait') {
@@ -59,6 +87,12 @@ export async function runReplay(
           }
 
           await page.waitForTimeout(step.waitAfter)
+
+          // Post-check: ensure the page hasn't redirected outside the allowed domain
+          const currentUrl = page.url()
+          if (!isAllowedDomain(currentUrl, artifact.targetApp)) {
+            throw new Error(`Navigated outside allowed domain: ${currentUrl}`)
+          }
 
           // Verify checkpoint — skip if it is the placeholder (value is empty)
           if (step.checkpoint.value !== '') {

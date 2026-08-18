@@ -74,7 +74,7 @@ function makeArtifact(overrides: Partial<Artifact> = {}): Artifact {
     goal:         'Test goal',
     targetApp:    'https://example.com',
     createdAt:    new Date().toISOString(),
-    allowWrites:  false,
+    allowWrites:  true,
     inputSchema:  {},
     outputSchema: {},
     steps: [
