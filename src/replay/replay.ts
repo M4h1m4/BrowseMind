@@ -125,7 +125,8 @@ export async function runReplay(
         retryCount:          succeeded ? 0 : step.maxRetries,
         status:              succeeded ? 'success' : 'failed',
         elementStrategyUsed: strategyUsed,
-        errorDetails:        succeeded ? undefined : lastError
+        sensitive:           step.sensitive,
+        errorDetails:        succeeded ? undefined : (step.sensitive ? '[redacted — sensitive step]' : lastError)
       })
 
       if (!succeeded) {

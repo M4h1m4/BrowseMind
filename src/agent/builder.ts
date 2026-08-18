@@ -1,6 +1,17 @@
 import { Artifact, Step, LLMAction, ElementData } from '../types'
 import { generateArtifactId } from '../artifact/repository'
 
+// Fields whose labels or placeholders indicate sensitive data
+const SENSITIVE_FIELD_PATTERN = /password|passwd|pwd|secret|ssn|social.?security|credit.?card|cvv|\bpin\b/i
+
+function isSensitiveStep(action: LLMAction, elementData: ElementData): boolean {
+  if (action.action !== 'input') return false
+  return (
+    SENSITIVE_FIELD_PATTERN.test(elementData.primary.value) ||
+    SENSITIVE_FIELD_PATTERN.test(elementData.secondary.value)
+  )
+}
+
 export class ArtifactBuilder {
   private steps: Step[] = []
 
@@ -11,12 +22,13 @@ export class ArtifactBuilder {
       this.steps[this.steps.length - 1].checkpoint = action.checkpointForPreviousStep
     }
 
+    const sensitive = isSensitiveStep(action, elementData)
     const step: Step = {
       stepNumber,
       actionType:            action.action,
       description:           action.targetDescription,
-      value:                 action.value ?? undefined,
-      sensitive:             false,
+      value:                 sensitive ? '****' : (action.value ?? undefined),
+      sensitive,
       elementData,
       waitAfter:             500,
       maxRetries:            3,

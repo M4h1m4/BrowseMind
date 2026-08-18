@@ -86,8 +86,9 @@ export interface RunStepLog {
   retryCount:          number
   status:              StepStatus
   elementStrategyUsed: ElementStrategy
-  screenshotPath?:     string        // only on failure, omitted if sensitive: true
-  errorDetails?:       string
+  sensitive:           boolean
+  screenshotPath?:     string        // only on failure, never written when sensitive: true
+  errorDetails?:       string        // redacted when sensitive: true
 }
 
 export interface RunLog {
