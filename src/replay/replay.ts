@@ -4,6 +4,7 @@ import { locateElement } from './elementLocator'
 import { verifyCheckpoint } from './checkpointVerifier'
 import { classifyAction, isAllowedDomain } from './guardrails'
 import { writeRunLog } from '../agent/logger'
+import { getAuthState } from '../session/authStore'
 
 export async function runReplay(
   runState: RunState,
@@ -18,6 +19,24 @@ export async function runReplay(
     const page    = await context.newPage()
 
     await page.setViewportSize({ width: 1280, height: 720 })
+
+    // ── Inject stored auth state so the replay starts already logged in ────────
+    try {
+      const domain    = new URL(artifact.targetApp).hostname
+      const authState = getAuthState(domain)
+      if (authState) {
+        await context.addCookies(authState.cookies)
+        await context.addInitScript((ls: Record<string, string>) => {
+          for (const [key, value] of Object.entries(ls)) {
+            localStorage.setItem(key, value)
+          }
+        }, authState.localStorage)
+        console.log(`[replay] injected auth state for ${domain}`)
+      }
+    } catch {
+      // Malformed targetApp URL — proceed without auth injection
+    }
+
     await page.goto(artifact.targetApp, { waitUntil: 'networkidle' })
 
     for (const step of artifact.steps) {
