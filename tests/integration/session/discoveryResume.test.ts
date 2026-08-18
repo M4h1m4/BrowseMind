@@ -3,8 +3,8 @@
  *
  * Verifies that when the LLM returns requiresLogin = true the discovery loop:
  *   1. Sets status to login_required and isPaused to true
- *   2. Waits for signalResume to be called with credentials
- *   3. Calls performLogin and captureAndStoreAuthState
+ *   2. Waits for signalResume to be called (no credentials)
+ *   3. Calls captureAndStoreAuthState after human logs in
  *   4. Continues the loop (does not exit early)
  *   5. Stores auth state so replay can inject it later
  */
@@ -148,7 +148,7 @@ describe('runDiscovery — login_required + resume', () => {
     const state = makeRunState()
 
     setTimeout(() => {
-      signalResume('disc-session-001', { username: 'admin', password: 'pass' })
+      signalResume('disc-session-001')
     }, 20)
 
     await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
@@ -166,7 +166,7 @@ describe('runDiscovery — login_required + resume', () => {
     const state = makeRunState()
 
     setTimeout(() => {
-      signalResume('disc-session-001', { username: 'admin', password: 'pass' })
+      signalResume('disc-session-001')
     }, 20)
 
     await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
@@ -188,7 +188,7 @@ describe('runDiscovery — login_required + resume', () => {
 
     setTimeout(() => {
       statusWhilePaused = state.status  // should be login_required at this point
-      signalResume('disc-session-001', { username: 'u', password: 'p' })
+      signalResume('disc-session-001')
     }, 20)
 
     await runDiscovery(state, 'Goal', 'https://example.com', 'tenant-001')

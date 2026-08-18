@@ -2,68 +2,30 @@
  * loginHandler integration tests
  *
  * Uses a mocked Playwright page/context to verify that:
- *   - performLogin fills the username and password fields and submits
  *   - captureAndStoreAuthState stores cookies and localStorage in the auth store
  */
 
-import { performLogin, captureAndStoreAuthState } from '../../../src/session/loginHandler'
+import { captureAndStoreAuthState } from '../../../src/session/loginHandler'
 import { getAuthState, clearAllAuthState } from '../../../src/session/authStore'
 
 // ─── Mock Playwright ──────────────────────────────────────────────────────────
 
-const mockFill   = jest.fn().mockResolvedValue(undefined)
-const mockClick  = jest.fn().mockResolvedValue(undefined)
-const mockPress  = jest.fn().mockResolvedValue(undefined)
-const mockIsVisible = jest.fn()
-
-const mockLocator = jest.fn().mockReturnValue({
-  first:     jest.fn().mockReturnValue({
-    isVisible: mockIsVisible,
-    click:     mockClick,
-    fill:      mockFill
-  })
-})
-
-const mockPage = {
-  locator:  mockLocator,
-  keyboard: { press: mockPress },
-  waitForTimeout: jest.fn().mockResolvedValue(undefined)
-} as any
-
-const mockCookies = jest.fn()
+const mockCookies  = jest.fn()
 const mockEvaluate = jest.fn()
 
-const mockContext = {
-  cookies:  mockCookies,
+const mockPage = {
+  evaluate: mockEvaluate
 } as any
 
-// Attach evaluate to the page (captureAndStoreAuthState uses page.evaluate)
-mockPage.evaluate = mockEvaluate
+const mockContext = {
+  cookies: mockCookies,
+} as any
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   clearAllAuthState()
   jest.clearAllMocks()
-  // Default: first visible selector wins
-  mockIsVisible.mockResolvedValue(true)
-})
-
-describe('performLogin', () => {
-  it('fills the username and password fields and presses Enter', async () => {
-    await performLogin(mockPage, { username: 'admin', password: 'secret123' })
-
-    // fill should have been called twice — once for username, once for password
-    expect(mockFill).toHaveBeenCalledWith('admin')
-    expect(mockFill).toHaveBeenCalledWith('secret123')
-    expect(mockPress).toHaveBeenCalledWith('Enter')
-  })
-
-  it('still calls keyboard.press(Enter) even if no visible fields found', async () => {
-    mockIsVisible.mockResolvedValue(false)
-    await performLogin(mockPage, { username: 'u', password: 'p' })
-    expect(mockPress).toHaveBeenCalledWith('Enter')
-  })
 })
 
 describe('captureAndStoreAuthState', () => {

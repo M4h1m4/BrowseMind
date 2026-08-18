@@ -2,7 +2,7 @@
  * Session management — resume API integration tests
  *
  * Verifies that POST /runs/:runId/resume:
- *   - delivers credentials to a waiting discovery loop via signalResume
+ *   - signals resume to a waiting discovery loop via signalResume
  *   - falls back to a plain status flip for paused runs that are not waiting
  */
 
@@ -39,32 +39,28 @@ async function createPausedRun(): Promise<string> {
   })
   const runId = res.body.runId as string
 
-  // Simulate the run being paused awaiting login (the discovery mock doesn't do this,
-  // so we patch state via the status endpoint + a second resume to verify the route)
   return runId
 }
 
-describe('POST /api/v1/runs/:runId/resume — credential delivery', () => {
-  it('delivers credentials to a waiting discovery loop and resolves the promise', async () => {
+describe('POST /api/v1/runs/:runId/resume — signal delivery', () => {
+  it('signals resume to a waiting discovery loop and resolves the promise', async () => {
     const runId = await createPausedRun()
 
-    // Simulate the discovery loop waiting for credentials
+    // Simulate the discovery loop waiting for human login
     const pending = waitForResume(runId)
 
     const res = await request(app)
       .post(`/api/v1/runs/${runId}/resume`)
-      .send({ humanNotes: 'logging in', username: 'admin', password: 'pass123' })
+      .send({ humanNotes: 'logging in manually' })
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('resumed')
 
-    // The promise should have been resolved with the supplied credentials
-    const creds = await pending
-    expect(creds.username).toBe('admin')
-    expect(creds.password).toBe('pass123')
+    // The promise should have been resolved (no credentials)
+    await expect(pending).resolves.toBeUndefined()
   })
 
-  it('returns 400 when no credentials are provided and run is not paused', async () => {
+  it('returns 400 when no pending signal and run is not paused', async () => {
     const runId = await createPausedRun()
 
     // Run is 'running' (not paused) since the discovery mock returns immediately
@@ -79,7 +75,7 @@ describe('POST /api/v1/runs/:runId/resume — credential delivery', () => {
   it('returns 404 for a non-existent runId', async () => {
     const res = await request(app)
       .post('/api/v1/runs/ghost-run/resume')
-      .send({ humanNotes: 'test', username: 'u', password: 'p' })
+      .send({ humanNotes: 'test' })
     expect(res.status).toBe(404)
   })
 })

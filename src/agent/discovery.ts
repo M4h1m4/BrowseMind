@@ -8,7 +8,7 @@ import { ArtifactBuilder } from './builder'
 import { saveArtifact } from '../artifact/repository'
 import { writeRunLog } from './logger'
 import { waitForResume } from '../session/resumeSignal'
-import { performLogin, captureAndStoreAuthState } from '../session/loginHandler'
+import { captureAndStoreAuthState } from '../session/loginHandler'
 
 const MAX_STEPS  = parseInt(process.env.MAX_STEPS_CAPTURE ?? '25')
 const CTX_WINDOW = 10
@@ -61,15 +61,13 @@ export async function runDiscovery(
       if (action.requiresLogin) {
         runState.status   = 'login_required'
         runState.isPaused = true
-        console.log(`[discovery] login required at step ${stepNumber} — waiting for credentials`)
+        console.log(`[discovery] login required at step ${stepNumber} — please log in manually in the browser and call POST /api/v1/runs/{runId}/resume`)
 
-        const creds = await waitForResume(runState.runId)
+        await waitForResume(runState.runId)
 
         runState.status   = 'running'
         runState.isPaused = false
-        console.log(`[discovery] credentials received — performing login`)
 
-        await performLogin(page, creds)
         await captureAndStoreAuthState(context, page, targetApp)
 
         // Re-loop: take fresh screenshot and ask LLM what to do next

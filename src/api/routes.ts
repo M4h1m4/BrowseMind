@@ -144,24 +144,12 @@ router.post('/runs/:runId/resume', (req: Request, res: Response) => {
     return
   }
 
-  const { humanNotes, username, password } = req.body as ResumeRunRequest
+  const { humanNotes } = req.body as ResumeRunRequest
 
-  if (username && password) {
-    // Credential delivery — bypass the isPaused gate since the discovery loop
-    // owns its own state transitions after receiving the signal
-    const delivered = signalResume(state.runId, { username, password })
-    if (!delivered) {
-      // No pending signal; fall back to a plain status flip (run must be paused)
-      if (!state.isPaused) {
-        res.status(400).json({ error: 'run is not paused' })
-        return
-      }
-      state.isPaused = false
-      state.status   = 'running'
-    }
-    // When delivered = true, the discovery loop flips status to 'running' itself
+  if (signalResume(state.runId)) {
+    // Discovery loop was waiting for human login — it will handle its own status transitions
   } else {
-    // Plain confirmation resume (no credentials)
+    // No pending signal — plain confirmation resume (e.g. destructive action confirmation)
     if (!state.isPaused) {
       res.status(400).json({ error: 'run is not paused' })
       return
@@ -172,7 +160,6 @@ router.post('/runs/:runId/resume', (req: Request, res: Response) => {
 
   state.interventionRequest = undefined
   console.log(`[handoff] run ${state.runId} resumed — notes: "${humanNotes ?? ''}"`)
-
   res.json({ status: 'resumed', resumedAt: new Date().toISOString() })
 })
 

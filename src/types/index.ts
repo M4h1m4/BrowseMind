@@ -158,9 +158,7 @@ export interface ReplayRunRequest {
 }
 
 export interface ResumeRunRequest {
-  humanNotes:  string
-  username?:   string   // supplied when resuming a login_required capture run
-  password?:   string
+  humanNotes: string
 }
 
 export interface RunStatusResponse {
