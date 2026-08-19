@@ -1,9 +1,16 @@
 node_modules/
 dist/
 .env
-db/artifacts.db
-evidence/runs/*.json
-evidence/runs/*.png
+
+# Database and evidence — runtime files, never committed
+db/
+evidence/
+
+# macOS
+.DS_Store
+
+# PDF attachments
+*.pdf
 
 # Planning documents — local only
 *.md
