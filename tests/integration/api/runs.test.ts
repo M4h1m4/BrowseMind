@@ -1,7 +1,11 @@
+import fs from 'fs'
+import path from 'path'
 import request from 'supertest'
 import { app } from '../../../src/app'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
 import { resetRuns } from '../../../src/api/routes'
+
+const EVIDENCE_DIR = path.join(process.cwd(), 'evidence', 'runs')
 
 jest.mock('../../../src/agent/discovery', () => ({
   runDiscovery: jest.fn().mockResolvedValue(undefined)
@@ -57,6 +61,46 @@ describe('POST /api/v1/runs/:runId/resume', () => {
       .send({ humanNotes: 'Done' })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/not paused/)
+  })
+})
+
+describe('GET /api/v1/runs/:runId/log', () => {
+  let testRunId: string
+
+  beforeEach(async () => {
+    testRunId = await createCaptureRun()
+    fs.mkdirSync(EVIDENCE_DIR, { recursive: true })
+  })
+
+  afterEach(() => {
+    const logPath = path.join(EVIDENCE_DIR, `${testRunId}.json`)
+    if (fs.existsSync(logPath)) fs.unlinkSync(logPath)
+  })
+
+  it('returns the run log when the file exists', async () => {
+    const fakeLog = {
+      runId: testRunId, type: 'capture', tenantId: 'tenant-001',
+      goal: 'Test goal', startedAt: new Date().toISOString(),
+      status: 'success', steps: []
+    }
+    fs.writeFileSync(path.join(EVIDENCE_DIR, `${testRunId}.json`), JSON.stringify(fakeLog))
+
+    const res = await request(app).get(`/api/v1/runs/${testRunId}/log`)
+    expect(res.status).toBe(200)
+    expect(res.body.log.runId).toBe(testRunId)
+    expect(res.body.log.status).toBe('success')
+  })
+
+  it('returns 404 when log file does not exist yet', async () => {
+    const res = await request(app).get(`/api/v1/runs/${testRunId}/log`)
+    expect(res.status).toBe(404)
+    expect(res.body.error).toMatch(/not yet available/)
+  })
+
+  it('returns 404 for a non-existent run', async () => {
+    const res = await request(app).get('/api/v1/runs/no-such-run/log')
+    expect(res.status).toBe(404)
+    expect(res.body.error).toMatch(/not found/)
   })
 })
 
