@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import { Router, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import {
@@ -133,6 +135,24 @@ router.get('/runs/:runId/status', (req: Request, res: Response) => {
   }
 
   res.json(response)
+})
+
+// ─── Run Log ──────────────────────────────────────────────────────────────────
+
+router.get('/runs/:runId/log', (req: Request, res: Response) => {
+  const { runId } = req.params
+  if (!runs.has(runId)) {
+    res.status(404).json({ error: `run ${runId} not found` })
+    return
+  }
+
+  const logPath = path.join(process.cwd(), 'evidence', 'runs', `${runId}.json`)
+  try {
+    const raw = fs.readFileSync(logPath, 'utf-8')
+    res.json({ log: JSON.parse(raw) })
+  } catch {
+    res.status(404).json({ error: 'log not yet available — run may still be in progress' })
+  }
 })
 
 // ─── Resume (human handoff complete) ─────────────────────────────────────────
