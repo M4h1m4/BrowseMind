@@ -63,6 +63,8 @@ async function executeStep(
   }
 
   // ── Destructive action — request human confirmation ───────────────────────
+  const startTime = new Date().toISOString()
+  
   if (actionClass === 'destructive' && mayEscalate) {
     let beforeScreenshot: string | undefined
     try {
@@ -114,7 +116,7 @@ async function executeStep(
       startTime,
       endTime:             new Date().toISOString(),
       retryCount:          0,
-      status:              'confirmation_required',
+      status:              'stuck',
       elementStrategyUsed: 'primary',
       sensitive:           step.sensitive,
       screenshotPath:      step.sensitive ? undefined : beforeScreenshot,
@@ -134,7 +136,6 @@ async function executeStep(
   let succeeded                    = false
   let lastError                    = ''
   let strategyUsed: ElementStrategy = 'primary'
-  const startTime                  = new Date().toISOString()
 
   for (let attempt = 0; attempt <= step.maxRetries; attempt++) {
     try {
