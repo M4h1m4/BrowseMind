@@ -41,9 +41,18 @@ export function findArtifactsByTenant(tenantId: string): Artifact[] {
   return rows.map(r => JSON.parse(r.content) as Artifact)
 }
 
-export function deleteArtifact(artifactId: string): boolean {
+/**
+ * Delete an artifact belonging to a tenant.
+ *
+ * The tenant is part of the WHERE clause, not an argument checked beforehand:
+ * the delete used to match on artifactId alone, so any caller with an id could
+ * remove another account's automation.
+ */
+export function deleteArtifact(artifactId: string, tenantId: string): boolean {
   const db = getDb()
-  const result = db.prepare('DELETE FROM artifacts WHERE artifactId = ?').run(artifactId)
+  const result = db
+    .prepare('DELETE FROM artifacts WHERE artifactId = ? AND tenantId = ?')
+    .run(artifactId, tenantId)
   return result.changes > 0
 }
 

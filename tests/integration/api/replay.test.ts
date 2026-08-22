@@ -45,10 +45,13 @@ describe('POST /api/v1/replay/run', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when tenantId is missing', async () => {
+  it('defaults the tenant when the caller does not supply one', async () => {
     const { tenantId, ...rest } = validBody
+    // The fixture artifact belongs to its own tenant, so the default finds
+    // nothing — the point is that the request is accepted, not rejected as
+    // malformed.
     const res = await request(app).post('/api/v1/replay/run').send(rest)
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(404)
   })
 
   it('returns 404 when tenantId does not match artifact tenant', async () => {

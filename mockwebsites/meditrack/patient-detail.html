@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Profile — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Patient Profile</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="main-content">
+      <!-- Rendered by JS -->
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('patients');
+
+    var params = new URL(location.href).searchParams;
+    var patientId = params.get('id') || 'P001';
+    var patient = MEDITRACK.getPatientById(patientId);
+    var main = document.getElementById('main-content');
+
+    if (!patient) {
+      main.innerHTML = '<div class="alert alert-error">Patient not found: ' + patientId + '</div>' +
+        '<a href="patients.html" class="btn btn-secondary">Back to Patients</a>';
+    } else {
+      document.title = patient.name + ' — MediTrack';
+      document.getElementById('topbar-title').textContent = patient.name;
+
+      var age = MEDITRACK.calculateAge(patient.dob);
+      var initials = MEDITRACK.getInitials(patient.name);
+      var medHistory = MEDITRACK.getMedicalHistoryByPatient(patientId);
+      var appts = MEDITRACK.getAppointmentsByPatient(patientId);
+      appts.sort(function(a, b) { return b.date.localeCompare(a.date); });
+
+      // Breadcrumb
+      var bc = '<nav class="breadcrumb">' +
+        '<a href="index.html">Dashboard</a><span class="breadcrumb-sep">›</span>' +
+        '<a href="patients.html">Patients</a><span class="breadcrumb-sep">›</span>' +
+        '<span class="breadcrumb-current">' + patient.name + '</span>' +
+        '</nav>';
+
+      // Profile header
+      var ph = '<div class="profile-header">' +
+        '<div class="profile-avatar">' + initials + '</div>' +
+        '<div style="flex:1;">' +
+        '<div class="profile-name"><span class="patient-name-text">' + patient.name + '</span> ' + MEDITRACK.getBloodTypeBadge(patient.bloodType) + '</div>' +
+        '<div class="profile-meta">' +
+        '<span class="profile-id">' + patient.id + '</span>' +
+        '<span>' + patient.gender + '</span>' +
+        '<span>Age ' + age + '</span>' +
+        '<span>DOB: ' + MEDITRACK.formatDate(patient.dob) + '</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="flex-gap">' +
+        '<a href="appointment-form.html?patientId=' + patientId + '" class="btn btn-primary">📅 Book Appointment</a>' +
+        '<a href="patients.html" class="btn btn-secondary">← Back</a>' +
+        '</div>' +
+        '</div>';
+
+      // Info grid section
+      var condBadges = patient.conditions.map(function(c) { return '<span class="badge badge-blue" style="margin:1px 2px;">' + c + '</span>'; }).join(' ');
+      var allergyBadges = patient.allergies.map(function(a) { return '<span class="badge badge-red" style="margin:1px 2px;">' + a + '</span>'; }).join(' ');
+
+      var infoSection =
+        '<div class="card" style="margin-bottom:0;">' +
+        '<div class="tabs" id="tab-row">' +
+        '<button class="tab-btn active" onclick="switchTab(\'overview\', this)">Overview</button>' +
+        '<button class="tab-btn" onclick="switchTab(\'history\', this)">Medical History (' + medHistory.length + ')</button>' +
+        '<button class="tab-btn" onclick="switchTab(\'appointments\', this)">Appointments (' + appts.length + ')</button>' +
+        '</div>' +
+
+        // OVERVIEW TAB
+        '<div class="tab-panel active" id="tab-overview">' +
+        '<div class="info-grid">' +
+        '<div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">' + MEDITRACK.formatDate(patient.dob) + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Age</div><div class="info-value">' + age + ' years</div></div>' +
+        '<div class="info-item"><div class="info-label">Gender</div><div class="info-value">' + patient.gender + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Blood Type</div><div class="info-value">' + patient.bloodType + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Phone</div><div class="info-value">' + patient.phone + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Email</div><div class="info-value">' + patient.email + '</div></div>' +
+        '</div>' +
+        '<hr style="margin:16px 0;border:none;border-top:1px solid var(--gray-200);">' +
+        '<div class="info-grid">' +
+        '<div class="info-item" style="grid-column:1/-1;"><div class="info-label">Address</div><div class="info-value">' + patient.address + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Insurance</div><div class="info-value">' + patient.insurance + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Emergency Contact</div><div class="info-value">' + patient.emergencyContact + '</div></div>' +
+        '</div>' +
+        '<hr style="margin:16px 0;border:none;border-top:1px solid var(--gray-200);">' +
+        '<div class="info-item mb-12"><div class="info-label">Active Conditions</div><div class="info-value mt-4">' + condBadges + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Known Allergies</div><div class="info-value mt-4">' + allergyBadges + '</div></div>' +
+        '</div>' +
+
+        // MEDICAL HISTORY TAB
+        '<div class="tab-panel" id="tab-history">' +
+        (medHistory.length === 0 ? '<p class="text-muted text-center" style="padding:24px;">No medical history records found.</p>' :
+        '<div class="table-wrapper"><table>' +
+        '<thead><tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Prescribed By</th><th>Notes</th></tr></thead>' +
+        '<tbody>' +
+        medHistory.map(function(h) {
+          return '<tr>' +
+            '<td style="white-space:nowrap;">' + MEDITRACK.formatDate(h.date) + '</td>' +
+            '<td style="font-weight:500;max-width:180px;">' + h.diagnosis + '</td>' +
+            '<td style="max-width:200px;font-size:12.5px;">' + h.treatment + '</td>' +
+            '<td style="white-space:nowrap;font-size:12.5px;">' + h.prescribedBy + '</td>' +
+            '<td style="max-width:200px;font-size:12px;color:var(--gray-500);">' + h.notes + '</td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>') +
+        '</div>' +
+
+        // APPOINTMENTS TAB
+        '<div class="tab-panel" id="tab-appointments">' +
+        '<div style="margin-bottom:12px;"><a href="appointment-form.html?patientId=' + patientId + '" class="btn btn-primary btn-sm">+ Book New Appointment</a></div>' +
+        (appts.length === 0 ? '<p class="text-muted text-center" style="padding:24px;">No appointments found.</p>' :
+        '<div class="table-wrapper"><table>' +
+        '<thead><tr><th>Appt ID</th><th>Date</th><th>Time</th><th>Doctor</th><th>Status</th><th>Notes</th></tr></thead>' +
+        '<tbody>' +
+        appts.map(function(a) {
+          var doc = MEDITRACK.getDoctorById(a.doctorId);
+          return '<tr>' +
+            '<td class="td-mono">' + a.id + '</td>' +
+            '<td style="white-space:nowrap;">' + MEDITRACK.formatDate(a.date) + '</td>' +
+            '<td>' + MEDITRACK.formatTime(a.time) + '</td>' +
+            '<td>' + (doc ? doc.name : a.doctorId) + '</td>' +
+            '<td>' + MEDITRACK.getStatusBadge(a.status) + '</td>' +
+            '<td style="max-width:220px;font-size:12px;color:var(--gray-500);">' + a.notes + '</td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>') +
+        '</div>' +
+
+        '</div>'; // end card
+
+      main.innerHTML = bc + ph + infoSection;
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.getElementById('tab-' + tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>

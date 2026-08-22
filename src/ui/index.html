@@ -206,6 +206,22 @@
       margin-top: 12px;
     }
 
+    /* ── Replay inputs modal ── */
+    .replay-inputs-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .replay-inputs-card {
+      background: #fff; border-radius: 12px; padding: 24px 28px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.18); width: 520px; max-height: 80vh;
+      overflow-y: auto;
+    }
+    .replay-inputs-card h3 { margin-bottom: 14px; font-size: 1rem; }
+    .replay-inputs-card label { display: block; font-size: 0.82rem; font-weight: 600; margin: 10px 0 4px; color: #555; }
+    .replay-inputs-card input { width: 100%; padding: 8px 10px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 0.88rem; }
+    .replay-inputs-card input:focus { border-color: #7c3aed; outline: none; }
+    .replay-inputs-card .btn-row { margin-top: 18px; }
+
     /* ── Hidden utility ── */
     .hidden { display: none !important; }
 
@@ -235,15 +251,15 @@
     <textarea id="nl-goal" rows="3"
       placeholder="e.g. Log in to OrangeHRM and submit a leave request for tomorrow"></textarea>
 
-    <div class="row">
-      <div>
-        <label for="target-app">Target App URL</label>
-        <input type="text" id="target-app" placeholder="https://opensource-demo.orangehrmlive.com" />
-      </div>
-      <div>
-        <label for="tenant-id">Tenant ID</label>
-        <input type="text" id="tenant-id" placeholder="my-org" />
-      </div>
+    <label for="target-app">Starting URL</label>
+    <input type="text" id="target-app" placeholder="http://localhost:4000" />
+
+    <label for="allowed-domains">Additional URLs the workflow may visit <span style="font-weight:400;color:#aaa;">(optional — comma-separated)</span></label>
+    <input type="text" id="allowed-domains" placeholder="https://auth.example.com, https://payments.stripe.com" />
+
+    <div style="margin:12px 0;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="auto-replay" style="width:16px;height:16px;cursor:pointer;" />
+      <label for="auto-replay" style="margin:0;font-size:0.9rem;cursor:pointer;">Auto-replay after capture <span style="font-weight:400;color:#aaa;">(single-record goals only — extra records in your goal always replay automatically)</span></label>
     </div>
 
     <div id="error-banner"></div>
@@ -289,6 +305,8 @@
 // ── State ────────────────────────────────────────────────────────────────────
 let currentRunId     = null
 let pollHandle       = null
+// Polls spent waiting for the next queued record's run to appear.
+let chainWaitTicks   = 0
 let artifactPollHandle = null
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -303,7 +321,10 @@ function clearError() {
   el.style.display = 'none'
 }
 
-function tenantId() { return document.getElementById('tenant-id').value.trim() }
+// Tenant is resolved by the server. It stays in the schema because the target
+// environment is many institutions running the same apps, but an operator should
+// never have to think about it — so it is not asked for here.
+
 
 function stopPolling() {
   if (pollHandle) { clearInterval(pollHandle); pollHandle = null }
@@ -318,13 +339,15 @@ function startPolling() {
 // ── Capture ───────────────────────────────────────────────────────────────────
 async function startCapture() {
   clearError()
-  const goal      = document.getElementById('nl-goal').value.trim()
-  const targetApp = document.getElementById('target-app').value.trim()
-  const tid       = tenantId()
+  const goal           = document.getElementById('nl-goal').value.trim()
+  const targetApp      = document.getElementById('target-app').value.trim()
+  const extraDomains   = document.getElementById('allowed-domains').value.trim()
+  const allowedDomains = extraDomains
+    ? extraDomains.split(',').map(s => s.trim()).filter(Boolean)
+    : []
 
   if (!goal)      { showError('Please describe what you want to automate.'); return }
-  if (!targetApp) { showError('Please enter the target app URL.'); return }
-  if (!tid)       { showError('Please enter a Tenant ID.'); return }
+  if (!targetApp) { showError('Please enter the starting URL.'); return }
 
   setBtnCapture(true)
 
@@ -332,7 +355,7 @@ async function startCapture() {
     const res  = await fetch('/api/v1/capture/run', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ goal, targetApp, tenantId: tid })
+      body:    JSON.stringify({ goal, targetApp, allowedDomains, autoReplay: document.getElementById('auto-replay').checked })
     })
     const data = await res.json()
 
@@ -362,22 +385,70 @@ function hideReplayForm()  { document.getElementById('replay-form').classList.ad
 async function startReplayById() {
   clearError()
   const artifactId = document.getElementById('artifact-id-input').value.trim()
-  const tid        = tenantId()
 
   if (!artifactId) { showError('Please enter an Artifact ID.'); return }
-  if (!tid)        { showError('Please enter a Tenant ID.'); return }
 
-  await launchReplay(artifactId, tid)
+  await launchReplay(artifactId)
   hideReplayForm()
 }
 
-async function launchReplay(artifactId, tid) {
+async function launchReplay(artifactId, inputOverrides) {
+  // If no overrides provided, fetch artifact and show input form
+  if (!inputOverrides) {
+    try {
+      const artRes = await fetch(`/api/v1/artifacts/${encodeURIComponent(artifactId)}`)
+      const artData = await artRes.json()
+      if (!artRes.ok) { showError(artData.error || 'Failed to fetch artifact.'); return }
+
+      const schema = artData.artifact?.inputSchema || {}
+      const keys = Object.keys(schema)
+
+      if (keys.length > 0) {
+        // Show replay inputs form
+        const fields = keys.map(k => {
+          const info = schema[k]
+          const defVal = info.default || ''
+          const isSensitive = info.sensitive ? ' (sensitive)' : ''
+          return `<label>${escHtml(k)}${isSensitive}</label>
+                  <input data-var="${escHtml(k)}" value="${escHtml(defVal)}" placeholder="Enter ${escHtml(k)}" />`
+        }).join('')
+
+        const overlay = document.createElement('div')
+        overlay.className = 'replay-inputs-overlay'
+        overlay.innerHTML = `
+          <div class="replay-inputs-card">
+            <h3>Replay Inputs — enter new values or keep defaults</h3>
+            ${fields}
+            <div class="btn-row">
+              <button class="btn-primary" id="replay-go-btn">▶ Start Replay</button>
+              <button class="btn-ghost" id="replay-cancel-btn">Cancel</button>
+            </div>
+          </div>`
+        document.body.appendChild(overlay)
+
+        document.getElementById('replay-cancel-btn').onclick = () => overlay.remove()
+        document.getElementById('replay-go-btn').onclick = () => {
+          const inputs = {}
+          overlay.querySelectorAll('input[data-var]').forEach(inp => {
+            inputs[inp.getAttribute('data-var')] = inp.value
+          })
+          overlay.remove()
+          launchReplay(artifactId, inputs)
+        }
+        return
+      }
+    } catch (e) {
+      // If fetch fails, proceed with empty inputs
+    }
+    inputOverrides = {}
+  }
+
   stopPolling()
   try {
     const res  = await fetch('/api/v1/replay/run', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ artifactId, tenantId: tid, inputs: {} })
+      body:    JSON.stringify({ artifactId, inputs: inputOverrides })
     })
     const data = await res.json()
 
@@ -416,6 +487,7 @@ function renderStatus(data) {
           <div class="spinner"></div>
           <div>
             <strong>Running</strong> — step ${data.currentStep ?? 0} in progress…
+            ${data.sampleLabel ? `<div style="margin-top:4px;">Replaying <strong>${escHtml(data.sampleLabel)}</strong> from your goal${data.pendingSamples ? ` — ${data.pendingSamples} more queued` : ''}</div>` : ''}
             <div class="step-info" style="margin-top:4px;">BrowseMind is automating the task in the background browser window.</div>
           </div>
         </div>`
@@ -477,14 +549,31 @@ function renderStatus(data) {
       break
 
     case 'success':
+      // The next record's run is created just after this one reports success —
+      // hold the poll open briefly rather than declaring the whole job done.
+      if (data.pendingSamples > 0 && !data.chainedRunId) {
+        if (chainWaitTicks++ < 15) {
+          area.innerHTML = `
+            <div class="status-banner banner-running">
+              <div class="spinner"></div>
+              <div>
+                <strong>Queuing next record…</strong>
+                <div class="step-info" style="margin-top:4px;">${data.pendingSamples} record(s) from your goal still to replay.</div>
+              </div>
+            </div>`
+          break
+        }
+      }
+      chainWaitTicks = 0
       stopPolling()
       setBtnCapture(false)
-      const outputs = data.outputs ? `<pre>${escHtml(JSON.stringify(data.outputs, null, 2))}</pre>` : ''
+      const outputs = data.outputs ? renderOutputs(data.outputs) : ''
       area.innerHTML = `
         <div class="status-banner banner-success">
           <span class="icon">✅</span>
           <div>
             <strong>Completed successfully</strong>
+            ${data.sampleLabel ? `<div style="margin-top:4px;">Replayed <strong>${escHtml(data.sampleLabel)}</strong> from your goal</div>` : ''}
             ${data.artifactId ? `<div style="margin-top:4px;">Artifact saved — ID: <code>${escHtml(data.artifactId)}</code></div>` : ''}
           </div>
         </div>
@@ -494,6 +583,18 @@ function renderStatus(data) {
           <button class="btn-primary" onclick="resetUI()">Start Another</button>
         </div>`
       loadArtifacts()
+
+      // The server queues one replay per additional record in the goal and hands
+      // us the next run's id — follow the chain instead of asking for values the
+      // operator already typed into the goal.
+      if (data.chainedRunId) {
+        chainWaitTicks = 0
+        currentRunId = data.chainedRunId
+        document.getElementById('run-id-label').textContent = `#${currentRunId}`
+        setBtnCapture(true)
+        renderStatus({ status: 'running', currentStep: 0, sampleLabel: data.sampleLabel })
+        startPolling()
+      }
       break
 
     case 'failed':
@@ -562,15 +663,8 @@ async function fetchLog() {
 
 // ── Artifacts Dashboard ───────────────────────────────────────────────────────
 async function loadArtifacts() {
-  const tid = tenantId()
-  if (!tid) {
-    document.getElementById('artifact-list').innerHTML =
-      '<div class="empty-state">Enter a Tenant ID above to see saved automations.</div>'
-    return
-  }
-
   try {
-    const res  = await fetch(`/api/v1/artifacts?tenantId=${encodeURIComponent(tid)}`)
+    const res  = await fetch('/api/v1/artifacts')
     const data = await res.json()
     if (!res.ok) return
 
@@ -591,7 +685,7 @@ async function loadArtifacts() {
             <div class="artifact-sub" style="margin-top:2px;font-family:monospace;font-size:0.73rem;color:#aaa;">${escHtml(a.artifactId)}</div>
           </div>
           <button class="btn-primary" style="flex-shrink:0;white-space:nowrap;"
-            onclick="launchReplay('${escHtml(a.artifactId)}', '${escHtml(a.tenantId)}')">
+            onclick="launchReplay('${escHtml(a.artifactId)}')">
             ▶ Replay
           </button>
         </div>`).join('') +
@@ -610,6 +704,27 @@ function resetUI() {
   clearError()
 }
 
+// ── Render Outputs ────────────────────────────────────────────────────────────
+function renderOutputs(outputs) {
+  if (!outputs) return ''
+  if (typeof outputs === 'string') return `<pre>${escHtml(outputs)}</pre>`
+  if (Array.isArray(outputs) && outputs.length > 0 && typeof outputs[0] === 'object') {
+    const headers = Object.keys(outputs[0])
+    let html = '<div style="margin-top:12px;overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">'
+    html += '<thead><tr>' + headers.map(h => `<th style="text-align:left;padding:8px 12px;border-bottom:2px solid #e0e0e0;background:#f5f5f5;">${escHtml(h)}</th>`).join('') + '</tr></thead>'
+    html += '<tbody>'
+    for (const row of outputs) {
+      html += '<tr>' + headers.map(h => `<td style="padding:6px 12px;border-bottom:1px solid #eee;">${escHtml(String(row[h] ?? ''))}</td>`).join('') + '</tr>'
+    }
+    html += '</tbody></table></div>'
+    return html
+  }
+  if (outputs.extractedData && Array.isArray(outputs.extractedData)) {
+    return renderOutputs(outputs.extractedData)
+  }
+  return `<pre>${escHtml(JSON.stringify(outputs, null, 2))}</pre>`
+}
+
 // ── Escape HTML ───────────────────────────────────────────────────────────────
 function escHtml(str) {
   if (str == null) return ''
@@ -622,8 +737,9 @@ function escHtml(str) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-// Auto-load artifacts whenever tenant-id changes
-document.getElementById('tenant-id').addEventListener('change', loadArtifacts)
+// Saved automations are shown as soon as the page opens — there is nothing for
+// the operator to fill in first.
+loadArtifacts()
 </script>
 </body>
 </html>

@@ -44,10 +44,13 @@ describe('POST /api/v1/capture/run', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when tenantId is missing', async () => {
+  it('defaults the tenant when the caller does not supply one', async () => {
+    // An operator should never have to know tenants exist; the schema keeps the
+    // concept, the API fills it in.
     const { tenantId, ...rest } = validBody
     const res = await request(app).post('/api/v1/capture/run').send(rest)
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(202)
+    expect(res.body.runId).toBeDefined()
   })
 
   it('generates a unique runId for each request', async () => {

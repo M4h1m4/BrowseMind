@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Departments — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Departments</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Departments</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Clinical Departments</h1>
+          <p>Overview of all clinical departments, department heads, and staff assignments.</p>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-card-body">
+            <div class="stat-card-label">Total Departments</div>
+            <div class="stat-card-value" id="dept-count">0</div>
+            <div class="stat-card-sub">Clinical units</div>
+          </div>
+          <div class="stat-card-icon icon-blue">🏢</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-body">
+            <div class="stat-card-label">Total Physicians</div>
+            <div class="stat-card-value" id="phys-count">0</div>
+            <div class="stat-card-sub">Across all departments</div>
+          </div>
+          <div class="stat-card-icon icon-green">👨‍⚕️</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-body">
+            <div class="stat-card-label">Total Clinical Staff</div>
+            <div class="stat-card-value" id="staff-count">0</div>
+            <div class="stat-card-sub">Including nurses & techs</div>
+          </div>
+          <div class="stat-card-icon icon-yellow">👤</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-body">
+            <div class="stat-card-label">Floors Occupied</div>
+            <div class="stat-card-value" id="floor-count">0</div>
+            <div class="stat-card-sub">Building floors</div>
+          </div>
+          <div class="stat-card-icon icon-red">🏥</div>
+        </div>
+      </div>
+
+      <!-- Department list table -->
+      <div class="card mb-16">
+        <div class="card-header">
+          <h2>Department Directory</h2>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Dept ID</th>
+                <th>Department Name</th>
+                <th>Department Head</th>
+                <th>Location</th>
+                <th>Phone</th>
+                <th>Physicians</th>
+                <th>Total Staff</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dept-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Department cards -->
+      <h2 style="font-size:15px;font-weight:700;color:var(--gray-700);margin-bottom:14px;">Department Cards</h2>
+      <div class="dept-grid" id="dept-cards"></div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('departments');
+
+    var depts = MEDITRACK.departments;
+
+    // Summary stats
+    document.getElementById('dept-count').textContent = depts.length;
+    document.getElementById('phys-count').textContent = MEDITRACK.doctors.length;
+    var totalStaff = depts.reduce(function(sum, d){ return sum + d.staffCount; }, 0);
+    document.getElementById('staff-count').textContent = totalStaff;
+    var floors = [...new Set(depts.map(function(d){ return d.floor.replace(/[^0-9]/g, ''); }))];
+    document.getElementById('floor-count').textContent = floors.length;
+
+    // Table
+    var tbody = document.getElementById('dept-tbody');
+    depts.forEach(function(d) {
+      var deptDoctors = MEDITRACK.doctors.filter(function(doc){ return d.doctorIds.includes(doc.id); });
+      var apptCount = 0;
+      deptDoctors.forEach(function(doc) {
+        apptCount += MEDITRACK.getAppointmentsByDoctor(doc.id).filter(function(a){ return a.status === 'scheduled'; }).length;
+      });
+
+      tbody.innerHTML += '<tr>' +
+        '<td class="td-mono">' + d.id + '</td>' +
+        '<td style="font-weight:700;">' + d.name + '</td>' +
+        '<td>' + d.head + '</td>' +
+        '<td>' + d.floor + '</td>' +
+        '<td>' + d.phone + '</td>' +
+        '<td><span class="badge badge-blue">' + deptDoctors.length + '</span></td>' +
+        '<td>' + d.staffCount + '</td>' +
+        '<td>' +
+          '<button class="btn btn-sm btn-secondary" onclick="toggleStaff(\'' + d.id + '\')">View Staff</button>' +
+        '</td>' +
+        '</tr>' +
+        '<tr id="staff-row-' + d.id + '" style="display:none;background:var(--gray-50);">' +
+        '<td colspan="8" style="padding:12px 20px;">' +
+        '<strong style="font-size:12px;color:var(--gray-600);">PHYSICIANS IN ' + d.name.toUpperCase() + ':</strong>' +
+        '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">' +
+        deptDoctors.map(function(doc) {
+          return '<a href="doctor-detail.html?id=' + doc.id + '" class="btn btn-sm btn-secondary">' + doc.name + ' <span class="badge badge-blue" style="margin-left:4px;">' + doc.specialty + '</span></a>';
+        }).join('') +
+        (deptDoctors.length === 0 ? '<span class="text-muted">No physicians listed.</span>' : '') +
+        '</div></td></tr>';
+    });
+
+    // Cards
+    var cardsEl = document.getElementById('dept-cards');
+    depts.forEach(function(d) {
+      var deptDoctors = MEDITRACK.doctors.filter(function(doc){ return d.doctorIds.includes(doc.id); });
+      var iconMap = {
+        'Internal Medicine': '🩺',
+        'Cardiology': '❤️',
+        'Endocrinology': '🔬',
+        'Rheumatology': '🦴',
+        'Pulmonology': '🫁',
+        'Gastroenterology': '💊',
+        'Neurology': '🧠'
+      };
+      var icon = iconMap[d.name] || '🏥';
+
+      var doctorList = deptDoctors.map(function(doc) {
+        return '<li>' +
+          '<a href="doctor-detail.html?id=' + doc.id + '" style="color:var(--accent);text-decoration:none;">' + doc.name + '</a>' +
+          ' — <span style="font-size:11.5px;color:var(--gray-500);">' + doc.specialty + '</span>' +
+        '</li>';
+      }).join('') || '<li class="text-muted">No physicians listed</li>';
+
+      cardsEl.innerHTML +=
+        '<div class="dept-card">' +
+        '<div class="dept-card-header" style="display:flex;align-items:center;gap:10px;">' +
+        '<span style="font-size:22px;">' + icon + '</span>' +
+        '<div><h3>' + d.name + '</h3><div style="font-size:11px;opacity:.75;margin-top:2px;">' + d.id + '</div></div>' +
+        '</div>' +
+        '<div class="dept-card-body">' +
+        '<div class="dept-info-row"><span class="dept-info-label">Department Head</span><span class="dept-info-value" style="font-size:12.5px;">' + d.head + '</span></div>' +
+        '<div class="dept-info-row"><span class="dept-info-label">Location</span><span class="dept-info-value">' + d.floor + '</span></div>' +
+        '<div class="dept-info-row"><span class="dept-info-label">Phone</span><span class="dept-info-value">' + d.phone + '</span></div>' +
+        '<div class="dept-info-row"><span class="dept-info-label">Total Staff</span><span class="dept-info-value"><span class="badge badge-gray">' + d.staffCount + '</span></span></div>' +
+        '<div class="dept-info-row"><span class="dept-info-label">Physicians</span><span class="dept-info-value"><span class="badge badge-blue">' + deptDoctors.length + '</span></span></div>' +
+        '</div>' +
+        '<button class="btn btn-sm btn-secondary" style="margin:0 14px 10px;width:calc(100% - 28px);" onclick="toggleDeptStaff(\'' + d.id + '-card\', this)">▼ View Staff</button>' +
+        '<div class="dept-staff-list" id="dept-staff-' + d.id + '-card">' +
+        '<ul>' + doctorList + '</ul>' +
+        '</div>' +
+        '</div>';
+    });
+
+    function toggleStaff(deptId) {
+      var row = document.getElementById('staff-row-' + deptId);
+      row.style.display = row.style.display === 'none' ? '' : 'none';
+    }
+
+    function toggleDeptStaff(cardId, btn) {
+      var el = document.getElementById('dept-staff-' + cardId);
+      var expanded = el.classList.toggle('expanded');
+      btn.textContent = expanded ? '▲ Hide Staff' : '▼ View Staff';
+    }
+  </script>
+</body>
+</html>

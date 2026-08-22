@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doctors — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Medical Staff</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Doctors</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Medical Staff Directory</h1>
+          <p>View all active physicians, their specialties, and availability.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Physicians (<span id="doc-count"></span>)</h2>
+          <div class="filter-bar" style="margin-bottom:0;">
+            <input type="search" id="doc-search" placeholder="Search by name or specialty…" />
+            <select id="dept-filter">
+              <option value="">All Departments</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Doctor ID</th>
+                <th>Name</th>
+                <th>Specialty</th>
+                <th>Department</th>
+                <th>Floor</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Availability</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="doctors-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Doctor Cards Grid -->
+      <div style="margin-top:24px;">
+        <h2 style="font-size:15px;font-weight:700;color:var(--gray-700);margin-bottom:14px;">Staff Cards</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;" id="doctor-cards"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('doctors');
+
+    var allDoctors = MEDITRACK.doctors.slice();
+    var filtered = allDoctors.slice();
+
+    // Populate department filter
+    var depts = [...new Set(MEDITRACK.doctors.map(function(d){ return d.department; }))];
+    var deptFilter = document.getElementById('dept-filter');
+    depts.forEach(function(dep) {
+      var opt = document.createElement('option');
+      opt.value = dep;
+      opt.textContent = dep;
+      deptFilter.appendChild(opt);
+    });
+
+    function scheduleSummary(sched) {
+      var days = Object.entries(sched).filter(function(kv){ return kv[1] !== 'Off'; }).map(function(kv){ return kv[0].slice(0,3); });
+      return days.length > 0 ? days.join(', ') : 'By appointment';
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById('doctors-tbody');
+      tbody.innerHTML = '';
+      document.getElementById('doc-count').textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding:28px;">No doctors match your search.</td></tr>';
+        return;
+      }
+
+      filtered.forEach(function(d) {
+        var apptCount = MEDITRACK.getAppointmentsByDoctor(d.id).filter(function(a){ return a.status === 'scheduled'; }).length;
+        tbody.innerHTML += '<tr>' +
+          '<td class="td-mono">' + d.id + '</td>' +
+          '<td style="font-weight:600;white-space:nowrap;">' + d.name + '</td>' +
+          '<td><span class="badge badge-blue">' + d.specialty + '</span></td>' +
+          '<td>' + d.department + '</td>' +
+          '<td>' + d.floor + 'F</td>' +
+          '<td style="white-space:nowrap;">' + d.phone + '</td>' +
+          '<td style="font-size:12px;">' + d.email + '</td>' +
+          '<td style="font-size:12px;">' + scheduleSummary(d.schedule) + '</td>' +
+          '<td>' +
+            '<div class="flex-gap">' +
+            '<a href="doctor-detail.html?id=' + d.id + '" class="btn btn-sm btn-primary">View</a>' +
+            '</div>' +
+          '</td>' +
+          '</tr>';
+      });
+    }
+
+    function renderCards() {
+      var grid = document.getElementById('doctor-cards');
+      grid.innerHTML = '';
+      MEDITRACK.doctors.forEach(function(d) {
+        var initials = MEDITRACK.getInitials(d.name);
+        var apptCount = MEDITRACK.getAppointmentsByDoctor(d.id).filter(function(a){ return a.status === 'scheduled'; }).length;
+        var availDays = Object.entries(d.schedule).filter(function(kv){ return kv[1] !== 'Off'; }).length;
+        grid.innerHTML +=
+          '<div class="card" style="margin-bottom:0;">' +
+          '<div style="padding:16px;text-align:center;border-bottom:1px solid var(--gray-200);">' +
+          '<div class="profile-avatar" style="margin:0 auto 10px;">' + initials + '</div>' +
+          '<div style="font-weight:700;font-size:13.5px;color:var(--gray-800);">' + d.name + '</div>' +
+          '<div style="font-size:12px;color:var(--gray-500);margin-top:3px;">' + d.specialty + '</div>' +
+          '</div>' +
+          '<div style="padding:12px 14px;">' +
+          '<div class="dept-info-row"><span class="dept-info-label">Department</span><span class="dept-info-value" style="font-size:12px;">' + d.department + '</span></div>' +
+          '<div class="dept-info-row"><span class="dept-info-label">Floor</span><span class="dept-info-value">' + d.floor + '</span></div>' +
+          '<div class="dept-info-row"><span class="dept-info-label">Upcoming Appts</span><span class="dept-info-value"><span class="badge badge-blue">' + apptCount + '</span></span></div>' +
+          '<div class="dept-info-row"><span class="dept-info-label">Days/Week</span><span class="dept-info-value">' + availDays + ' days</span></div>' +
+          '</div>' +
+          '<div style="padding:10px 14px;border-top:1px solid var(--gray-100);">' +
+          '<a href="doctor-detail.html?id=' + d.id + '" class="btn btn-sm btn-primary" style="width:100%;justify-content:center;">View Profile</a>' +
+          '</div>' +
+          '</div>';
+      });
+    }
+
+    function applyFilters() {
+      var search = document.getElementById('doc-search').value.toLowerCase();
+      var dept = document.getElementById('dept-filter').value;
+      filtered = allDoctors.filter(function(d) {
+        var matchSearch = !search || d.name.toLowerCase().includes(search) || d.specialty.toLowerCase().includes(search);
+        var matchDept = !dept || d.department === dept;
+        return matchSearch && matchDept;
+      });
+      renderTable();
+    }
+
+    document.getElementById('doc-search').addEventListener('input', applyFilters);
+    document.getElementById('dept-filter').addEventListener('change', applyFilters);
+
+    renderTable();
+    renderCards();
+  </script>
+</body>
+</html>

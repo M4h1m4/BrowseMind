@@ -86,18 +86,18 @@ describe('findArtifactsByTenant', () => {
 describe('deleteArtifact', () => {
   it('returns true when artifact is deleted', () => {
     saveArtifact(sampleArtifact)
-    const deleted = deleteArtifact(sampleArtifact.artifactId)
+    const deleted = deleteArtifact(sampleArtifact.artifactId, sampleArtifact.tenantId)
     expect(deleted).toBe(true)
   })
 
   it('returns false when artifact does not exist', () => {
-    const deleted = deleteArtifact('non-existent-id')
+    const deleted = deleteArtifact('non-existent-id', sampleArtifact.tenantId)
     expect(deleted).toBe(false)
   })
 
   it('removes the artifact from the database', () => {
     saveArtifact(sampleArtifact)
-    deleteArtifact(sampleArtifact.artifactId)
+    deleteArtifact(sampleArtifact.artifactId, sampleArtifact.tenantId)
     const result = findArtifactById(sampleArtifact.artifactId, sampleArtifact.tenantId)
     expect(result).toBeNull()
   })

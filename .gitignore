@@ -9,3 +9,20 @@ evidence/runs/*.png
 *.md
 !README.md
 *.docx
+
+# OS and editor noise
+.DS_Store
+
+# Local runtime databases for the mock sites
+*.db
+*.db-shm
+*.db-wal
+
+# Scratch output from data-collection runs
+out/
+output/
+output.json
+results.json
+
+# Assignment briefs — reference only, not part of the deliverable
+*.pdf

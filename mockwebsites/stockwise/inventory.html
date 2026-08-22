@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Overview — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html" class="active"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <span class="current">Inventory Overview</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Inventory Overview</h1>
+          <p>Full stock visibility across all products, sorted by stock level percentage.</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary" onclick="document.getElementById('bulk-adjust').scrollIntoView({behavior:'smooth'})">🔧 Bulk Adjust</button>
+          <button class="btn btn-secondary" onclick="exportNotice()">📤 Export CSV</button>
+          <a href="new-order.html" class="btn btn-primary">📄 New Order</a>
+        </div>
+      </div>
+
+      <!-- Summary Strip -->
+      <div class="summary-strip" id="summary-strip">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Low Stock Alert -->
+      <div class="alert alert-danger" id="inv-alert">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-body">
+          <strong id="inv-alert-title">Loading alerts…</strong>
+          <span id="inv-alert-body"></span>
+        </div>
+      </div>
+
+      <!-- Export notice (hidden) -->
+      <div class="alert alert-info hidden" id="export-notice">
+        <span class="alert-icon">📤</span>
+        <div class="alert-body"><strong>Export Initiated</strong> Your CSV file is being generated and will download shortly.</div>
+      </div>
+
+      <!-- Full Inventory Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>All Products — Stock Status</h2>
+          <div class="card-header-actions">
+            <span class="text-muted text-small" id="inv-sort-label">Sorted by stock % (lowest first)</span>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Stock</th>
+                <th>Reorder Point</th>
+                <th>Stock Level Bar</th>
+                <th>Stock %</th>
+                <th>Unit Price</th>
+                <th>Stock Value</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bulk Adjust Section -->
+      <div class="card" id="bulk-adjust">
+        <div class="card-header">
+          <h2>🔧 Bulk Stock Adjustment</h2>
+          <span class="text-muted text-small">Adjust multiple products at once</span>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info" style="margin-bottom:16px;">
+            <span class="alert-icon">ℹ️</span>
+            <div class="alert-body">Use this panel to apply stock adjustments to multiple products simultaneously. Each row is independent. Leave quantity blank to skip a product.</div>
+          </div>
+          <div id="bulk-success" class="alert alert-success hidden">
+            <span class="alert-icon">✓</span>
+            <div class="alert-body"><strong>Bulk Adjustment Submitted</strong> All non-empty adjustments have been recorded.</div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="bulk-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Current Stock</th>
+                  <th>Adjustment Type</th>
+                  <th>Quantity</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
+              <tbody id="bulk-tbody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:10px;">
+            <button class="btn btn-primary" onclick="submitBulk()">Submit All Adjustments</button>
+            <button class="btn btn-secondary" onclick="clearBulk()">Clear All</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+  const products = STOCKWISE.products;
+
+  function stockPct(p) {
+    return p.stockLevel / (p.reorderPoint * 2);
+  }
+
+  function stockClass(p) {
+    if (p.stockLevel <= p.reorderPoint * 0.5) return 'critical';
+    if (p.stockLevel <= p.reorderPoint) return 'low';
+    return 'ok';
+  }
+
+  function categoryBadgeClass(cat) {
+    const map = {
+      'Electronics': 'badge-electronics', 'Office Supplies': 'badge-office',
+      'Furniture': 'badge-furniture', 'Tools': 'badge-tools', 'Consumables': 'badge-consumables'
+    };
+    return map[cat] || 'badge-draft';
+  }
+
+  // Compute summary stats
+  const totalUnits = products.reduce((s, p) => s + p.stockLevel, 0);
+  const totalValue = products.reduce((s, p) => s + p.stockLevel * p.unitPrice, 0);
+  const lowStockCount = products.filter(p => p.stockLevel <= p.reorderPoint).length;
+  const criticalCount = products.filter(p => p.stockLevel <= p.reorderPoint * 0.5).length;
+
+  // Summary strip
+  document.getElementById('summary-strip').innerHTML = `
+    <div class="summary-strip-item">
+      <div class="s-label">Total SKUs</div>
+      <div class="s-value">${products.length}</div>
+    </div>
+    <div class="summary-strip-item">
+      <div class="s-label">Total Units in Stock</div>
+      <div class="s-value">${totalUnits.toLocaleString()}</div>
+    </div>
+    <div class="summary-strip-item">
+      <div class="s-label">Total Stock Value</div>
+      <div class="s-value">$${totalValue.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}</div>
+    </div>
+    <div class="summary-strip-item">
+      <div class="s-label">Low Stock Count</div>
+      <div class="s-value alert">${lowStockCount}</div>
+    </div>
+    <div class="summary-strip-item">
+      <div class="s-label">Critical Count</div>
+      <div class="s-value alert">${criticalCount}</div>
+    </div>
+  `;
+
+  // Alert banner
+  if (lowStockCount === 0) {
+    document.getElementById('inv-alert').style.display = 'none';
+  } else {
+    document.getElementById('inv-alert-title').textContent = `${lowStockCount} Product(s) Below Reorder Point`;
+    const criticals = products.filter(p => p.stockLevel <= p.reorderPoint * 0.5).map(p => p.name);
+    document.getElementById('inv-alert-body').textContent = criticals.length
+      ? `Critical (needs immediate action): ${criticals.join(', ')}.`
+      : 'Please review and create purchase orders as needed.';
+  }
+
+  // Sort products by stock percentage ascending
+  const sorted = [...products].sort((a, b) => stockPct(a) - stockPct(b));
+
+  // Inventory table
+  const tbody = document.getElementById('inventory-tbody');
+  tbody.innerHTML = sorted.map((p, i) => {
+    const cls = stockClass(p);
+    const pctRaw = stockPct(p);
+    const pctDisplay = Math.round(pctRaw * 100);
+    const barWidth = Math.min(100, pctDisplay);
+    const stockValue = (p.stockLevel * p.unitPrice).toFixed(2);
+    const rowClass = cls === 'critical' ? 'row-critical' : cls === 'low' ? 'row-alert' : '';
+    const statusBadge = cls === 'critical'
+      ? '<span class="badge badge-critical">🔴 Critical</span>'
+      : cls === 'low'
+      ? '<span class="badge badge-low">⚠️ Low</span>'
+      : '<span class="badge badge-ok">✓ OK</span>';
+    return `<tr class="${rowClass}">
+      <td class="text-muted">${i+1}</td>
+      <td>
+        <a href="product-detail.html?id=${p.id}" style="font-weight:600;">${p.name}</a>
+        <div style="font-size:11px; color:#9ca3af;">${p.id}</div>
+      </td>
+      <td><span class="mono">${p.sku}</span></td>
+      <td><span class="badge ${categoryBadgeClass(p.category)}">${p.category}</span></td>
+      <td class="text-bold ${cls === 'critical' ? 'text-red' : cls === 'low' ? 'text-orange' : 'text-green'}">${p.stockLevel} ${p.unit}</td>
+      <td>${p.reorderPoint} ${p.unit}</td>
+      <td style="min-width:120px;">
+        <div class="stock-bar-wrap" style="min-width:100px;">
+          <div class="stock-bar bar-${cls}" style="width:${barWidth}%"></div>
+        </div>
+      </td>
+      <td class="${cls === 'critical' ? 'text-red text-bold' : cls === 'low' ? 'text-orange text-bold' : ''}">${pctDisplay}%</td>
+      <td>$${p.unitPrice.toFixed(2)}</td>
+      <td>$${parseFloat(stockValue).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex; gap:6px;">
+          <a href="product-detail.html?id=${p.id}" class="btn btn-sm btn-secondary">View</a>
+          <a href="new-order.html" class="btn btn-sm btn-warning" title="Reorder">Reorder</a>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Bulk adjust table (only low/critical products pre-populated)
+  const bulkProducts = sorted.filter(p => stockClass(p) !== 'ok').concat(sorted.filter(p => stockClass(p) === 'ok').slice(0, 5));
+  const bulkTbody = document.getElementById('bulk-tbody');
+  bulkTbody.innerHTML = bulkProducts.map(p => {
+    return `<tr>
+      <td style="font-weight:600;">${p.name}</td>
+      <td><span class="mono">${p.sku}</span></td>
+      <td class="${stockClass(p) !== 'ok' ? 'text-red text-bold' : ''}">${p.stockLevel} ${p.unit}</td>
+      <td>
+        <select class="form-control" style="padding:4px 8px; font-size:12px;" data-id="${p.id}-type">
+          <option value="purchase">Purchase Receipt</option>
+          <option value="adjustment">Manual Adjustment</option>
+          <option value="return">Return</option>
+          <option value="damage">Damage Write-off</option>
+        </select>
+      </td>
+      <td>
+        <input type="number" class="form-control" style="padding:4px 8px; font-size:12px; width:90px;" placeholder="Qty" data-id="${p.id}-qty">
+      </td>
+      <td>
+        <input type="text" class="form-control" style="padding:4px 8px; font-size:12px;" placeholder="Ref / Note" data-id="${p.id}-ref">
+      </td>
+    </tr>`;
+  }).join('');
+
+  function submitBulk() {
+    document.getElementById('bulk-success').classList.remove('hidden');
+    window.scrollTo({ top: document.getElementById('bulk-adjust').offsetTop - 20, behavior: 'smooth' });
+  }
+
+  function clearBulk() {
+    document.querySelectorAll('#bulk-tbody input').forEach(el => el.value = '');
+    document.getElementById('bulk-success').classList.add('hidden');
+  }
+
+  function exportNotice() {
+    document.getElementById('export-notice').classList.remove('hidden');
+    setTimeout(() => document.getElementById('export-notice').classList.add('hidden'), 4000);
+  }
+</script>
+</body>
+</html>

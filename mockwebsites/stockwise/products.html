@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html" class="active"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <span class="current">Products</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Product Catalog</h1>
+          <p>Browse, search, and manage all inventory products.</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="product-form.html" class="btn btn-primary">➕ Add Product</a>
+        </div>
+      </div>
+
+      <!-- Alert for low-stock summary -->
+      <div class="alert alert-warning" id="low-stock-summary-alert">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong id="low-stock-alert-title">Low Stock Notice</strong>
+          <span id="low-stock-alert-body"></span>
+        </div>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="filter-tabs" id="category-tabs">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="form-control" id="product-search" placeholder="Search by name or SKU…">
+        </div>
+        <span class="text-muted" id="results-count" style="font-size:12.5px;"></span>
+      </div>
+
+      <!-- Products Table -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Stock Level</th>
+                <th>Unit Price</th>
+                <th>Unit</th>
+                <th>Supplier</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+  // Start from the bundled catalogue, then replace it with the database's copy
+  // so products saved through the form appear here too.
+  let products = STOCKWISE.products;
+
+  fetch('/api/products')
+    .then(function (res) { return res.json(); })
+    .then(function (rows) {
+      if (Array.isArray(rows) && rows.length > 0) {
+        products = rows;
+        if (typeof renderTable === 'function') renderTable();
+      }
+    })
+    .catch(function () { /* fall back to the bundled catalogue */ });
+  const suppliers = STOCKWISE.suppliers;
+
+  function getSupplier(id) {
+    return suppliers.find(s => s.id === id) || { name: 'Unknown' };
+  }
+
+  function stockClass(p) {
+    if (p.stockLevel <= p.reorderPoint * 0.5) return 'critical';
+    if (p.stockLevel <= p.reorderPoint) return 'low';
+    return 'ok';
+  }
+
+  function categoryBadgeClass(cat) {
+    const map = {
+      'Electronics': 'badge-electronics',
+      'Office Supplies': 'badge-office',
+      'Furniture': 'badge-furniture',
+      'Tools': 'badge-tools',
+      'Consumables': 'badge-consumables'
+    };
+    return map[cat] || 'badge-draft';
+  }
+
+  function stockBadge(p) {
+    const cls = stockClass(p);
+    const pct = Math.min(100, Math.round((p.stockLevel / (p.reorderPoint * 2)) * 100));
+    const icon = cls === 'critical' ? '🔴' : cls === 'low' ? '🟡' : '🟢';
+    const badgeClass = cls === 'critical' ? 'badge-critical' : cls === 'low' ? 'badge-low' : 'badge-ok';
+    const label = cls === 'critical' ? 'Critical' : cls === 'low' ? 'Low Stock' : 'In Stock';
+    return `
+      <div>
+        <div class="stock-indicator" style="margin-bottom:4px;">
+          <div class="stock-bar-wrap">
+            <div class="stock-bar bar-${cls}" style="width:${pct}%"></div>
+          </div>
+          <span class="stock-label label-${cls}">${p.stockLevel} / ${p.reorderPoint}</span>
+        </div>
+        <span class="badge ${badgeClass}">${icon} ${p.stockLevel} ${p.unit} — ${label}</span>
+      </div>`;
+  }
+
+  // Build category list
+  const categories = ['All', ...new Set(products.map(p => p.category))];
+  const lowStock = products.filter(p => p.stockLevel <= p.reorderPoint);
+
+  // Alert
+  const alertTitle = document.getElementById('low-stock-alert-title');
+  const alertBody = document.getElementById('low-stock-alert-body');
+  alertTitle.textContent = `${lowStock.length} Products Below Reorder Point`;
+  alertBody.textContent = lowStock.map(p => p.name).join(', ') + '. Please review and create purchase orders as needed.';
+
+  // Category tabs
+  let activeCategory = 'All';
+  let searchQuery = '';
+
+  const tabsEl = document.getElementById('category-tabs');
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab' + (cat === 'All' ? ' active' : '');
+    const count = cat === 'All' ? products.length : products.filter(p => p.category === cat).length;
+    btn.innerHTML = `${cat} <span class="tab-count">${count}</span>`;
+    btn.addEventListener('click', () => {
+      activeCategory = cat;
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderTable();
+    });
+    tabsEl.appendChild(btn);
+  });
+
+  // Search
+  document.getElementById('product-search').addEventListener('input', e => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    renderTable();
+  });
+
+  function renderTable() {
+    let filtered = products.filter(p => {
+      const catMatch = activeCategory === 'All' || p.category === activeCategory;
+      const searchMatch = !searchQuery ||
+        p.name.toLowerCase().includes(searchQuery) ||
+        p.sku.toLowerCase().includes(searchQuery);
+      return catMatch && searchMatch;
+    });
+
+    document.getElementById('results-count').textContent = `Showing ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`;
+
+    const tbody = document.getElementById('products-tbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="table-empty">No products match your search criteria.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+      const cls = stockClass(p);
+      const supplier = getSupplier(p.supplierId);
+      const rowClass = cls === 'critical' ? 'row-critical' : cls === 'low' ? 'row-alert' : '';
+      const statusBadge = cls === 'critical'
+        ? '<span class="badge badge-critical">🔴 Critical</span>'
+        : cls === 'low'
+        ? '<span class="badge badge-low">⚠️ Low Stock</span>'
+        : '<span class="badge badge-ok">✓ OK</span>';
+      return `<tr class="${rowClass}">
+        <td><span class="mono">${p.sku}</span></td>
+        <td>
+          <a href="product-detail.html?id=${p.id}" style="font-weight:600; color:#1a3a2a;">${p.name}</a>
+          <div style="font-size:11px; color:#9ca3af; margin-top:2px;">${p.id}</div>
+        </td>
+        <td><span class="badge ${categoryBadgeClass(p.category)}">${p.category}</span></td>
+        <td>${stockBadge(p)}</td>
+        <td class="text-bold">$${p.unitPrice.toFixed(2)}</td>
+        <td class="text-muted">${p.unit}</td>
+        <td><a href="supplier-detail.html?id=${p.supplierId}" style="color:#16a34a;">${supplier.name}</a></td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            <a href="product-detail.html?id=${p.id}" class="btn btn-sm btn-secondary">View</a>
+            <a href="inventory.html" class="btn btn-sm btn-ghost" title="Adjust Stock">🔧 Adjust</a>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  renderTable();
+</script>
+</body>
+</html>

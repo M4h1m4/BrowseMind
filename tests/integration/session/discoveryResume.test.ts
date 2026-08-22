@@ -102,6 +102,18 @@ const baseAction = {
   updatedSummary:    'clicked'
 }
 
+const doneOutputAction = {
+  ...baseAction,
+  action:       'output' as const,
+  coordinates:  undefined,
+  targetDescription: 'Write output',
+  goalComplete: true,
+  outputFormat: 'json' as const,
+  outputPath:   'out/test.json',
+  outputFields: [{ header: 'Test', variable: '{{test}}' }],
+  updatedSummary: 'done'
+}
+
 function makeRunState(): RunState {
   const now = new Date().toISOString()
   return {
@@ -143,7 +155,7 @@ describe('runDiscovery — login_required + resume', () => {
 
     callLLMMock
       .mockResolvedValueOnce({ ...baseAction, requiresLogin: true, updatedSummary: 'need login' })
-      .mockResolvedValueOnce({ ...baseAction, goalComplete: true,  updatedSummary: 'done' })
+      .mockResolvedValueOnce({ ...doneOutputAction })
 
     const state = makeRunState()
 
@@ -151,7 +163,7 @@ describe('runDiscovery — login_required + resume', () => {
       signalResume('disc-session-001')
     }, 20)
 
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(state.status).toBe('success')
   })
@@ -161,7 +173,7 @@ describe('runDiscovery — login_required + resume', () => {
 
     callLLMMock
       .mockResolvedValueOnce({ ...baseAction, requiresLogin: true, updatedSummary: 'need login' })
-      .mockResolvedValueOnce({ ...baseAction, goalComplete: true,  updatedSummary: 'done' })
+      .mockResolvedValueOnce({ ...doneOutputAction })
 
     const state = makeRunState()
 
@@ -169,9 +181,9 @@ describe('runDiscovery — login_required + resume', () => {
       signalResume('disc-session-001')
     }, 20)
 
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
-    const auth = getAuthState('example.com')
+    const auth = getAuthState('tenant-001', 'example.com')
     expect(auth).toBeDefined()
     expect(auth?.localStorage).toEqual({ authToken: 'captured-token' })
   })
@@ -182,7 +194,7 @@ describe('runDiscovery — login_required + resume', () => {
 
     callLLMMock
       .mockResolvedValueOnce({ ...baseAction, requiresLogin: true, updatedSummary: 'need login' })
-      .mockResolvedValueOnce({ ...baseAction, goalComplete: true,  updatedSummary: 'done' })
+      .mockResolvedValueOnce({ ...doneOutputAction })
 
     const state = makeRunState()
 

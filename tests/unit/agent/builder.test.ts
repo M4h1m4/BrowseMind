@@ -60,7 +60,10 @@ describe('ArtifactBuilder', () => {
       builder.addStep(makeAction({ action: 'input', value: 'John Doe' }), makeElementData(), 1)
       const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
       expect(artifact.steps[0].actionType).toBe('input')
-      expect(artifact.steps[0].value).toBe('John Doe')
+      // Input values are now templatized; real value stored in inputSchema
+      expect(artifact.steps[0].value).toMatch(/^\{\{.+\}\}$/)
+      const varName = artifact.steps[0].value!.replace(/^\{\{|\}\}$/g, '')
+      expect(artifact.inputSchema[varName].default).toBe('John Doe')
     })
 
     it('stores element data correctly', () => {
@@ -75,6 +78,78 @@ describe('ArtifactBuilder', () => {
       builder.addStep(makeAction({ value: null }), makeElementData(), 1)
       const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
       expect(artifact.steps[0].value).toBeUndefined()
+    })
+
+    it('addStep with action=extract stores cssSelector, variableName, and attribute', () => {
+      const action = makeAction({
+        action:            'extract',
+        targetDescription: 'Extract patient name',
+        cssSelector:       'td.patient-name',
+        variableName:      'patientName',
+        attribute:         'data-id',
+      })
+      builder.addStep(action, makeElementData(), 1)
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      const step = artifact.steps[0]
+      expect(step.actionType).toBe('extract')
+      expect(step.cssSelector).toBe('td.patient-name')
+      expect(step.variableName).toBe('patientName')
+      expect(step.attribute).toBe('data-id')
+    })
+
+    it('addStep with action=loop stores loopSelector and innerSteps array', () => {
+      const action = makeAction({
+        action:            'loop',
+        targetDescription: 'Loop over each result row',
+        loopSelector:      'tbody tr',
+        innerSteps: [
+          {
+            checkpointForPreviousStep: null,
+            action:            'extract',
+            targetDescription: 'Extract row text',
+            value:             null,
+            reasoning:         '',
+            requiresLogin:     false,
+            goalComplete:      false,
+            updatedSummary:    '',
+            cssSelector:       'td.name',
+            variableName:      'rowName',
+          }
+        ],
+      })
+      builder.addStep(action, makeElementData(), 1)
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      const step = artifact.steps[0]
+      expect(step.actionType).toBe('loop')
+      expect(step.loopSelector).toBe('tbody tr')
+      expect(Array.isArray(step.innerSteps)).toBe(true)
+      expect(step.innerSteps).toHaveLength(1)
+      expect(step.innerSteps![0].actionType).toBe('extract')
+      expect(step.innerSteps![0].cssSelector).toBe('td.name')
+      expect(step.innerSteps![0].variableName).toBe('rowName')
+    })
+
+    it('addStep with action=output stores outputFormat, outputPath, and outputFields', () => {
+      const action = makeAction({
+        action:            'output',
+        targetDescription: 'Write results to file',
+        outputFormat:      'json',
+        outputPath:        'results/output.json',
+        outputFields: [
+          { header: 'Name',   variable: '{{patientName}}' },
+          { header: 'Amount', variable: '{{billAmount}}' },
+        ],
+      })
+      builder.addStep(action, makeElementData(), 1)
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      const step = artifact.steps[0]
+      expect(step.actionType).toBe('output')
+      expect(step.outputFormat).toBe('json')
+      expect(step.outputPath).toBe('results/output.json')
+      expect(step.outputFields).toHaveLength(2)
+      expect(step.outputFields![0].header).toBe('Name')
+      expect(step.outputFields![0].variable).toBe('{{patientName}}')
+      expect(step.outputFields![1].header).toBe('Amount')
     })
   })
 
@@ -100,6 +175,7 @@ describe('ArtifactBuilder', () => {
       expect(artifact.artifactId).toBeDefined()
       expect(artifact.goal).toBe('Search employee')
       expect(artifact.targetApp).toBe('https://example.com')
+      expect(artifact.allowedDomains).toContain('https://example.com')
       expect(artifact.tenantId).toBe('tenant-001')
       expect(artifact.version).toBe(1)
       expect(artifact.allowWrites).toBe(false)
@@ -127,6 +203,56 @@ describe('ArtifactBuilder', () => {
       expect(artifact.steps[0].description).toBe('first')
       expect(artifact.steps[1].description).toBe('second')
       expect(artifact.steps[2].description).toBe('third')
+    })
+
+    it('sets allowWrites=true when artifact contains a top-level output step', () => {
+      builder.addStep(makeAction({ action: 'navigate', targetDescription: 'Go to results' }), makeElementData(), 1)
+      builder.addStep(
+        makeAction({
+          action:            'output',
+          targetDescription: 'Write results',
+          outputFormat:      'json',
+          outputPath:        'out.json',
+          outputFields:      [],
+        }),
+        makeElementData(),
+        2
+      )
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      expect(artifact.allowWrites).toBe(true)
+    })
+
+    it('sets allowWrites=false when no output steps are present', () => {
+      builder.addStep(makeAction({ action: 'click', targetDescription: 'Click search' }), makeElementData(), 1)
+      builder.addStep(makeAction({ action: 'input', targetDescription: 'Enter name', value: 'Alice' }), makeElementData(), 2)
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      expect(artifact.allowWrites).toBe(false)
+    })
+
+    it('sets allowWrites=true when output step is nested inside a loop step', () => {
+      const loopAction = makeAction({
+        action:            'loop',
+        targetDescription: 'Loop over rows',
+        loopSelector:      'tbody tr',
+        innerSteps: [
+          {
+            checkpointForPreviousStep: null,
+            action:            'output',
+            targetDescription: 'Write row output',
+            value:             null,
+            reasoning:         '',
+            requiresLogin:     false,
+            goalComplete:      false,
+            updatedSummary:    '',
+            outputFormat:      'json',
+            outputPath:        'out.json',
+            outputFields:      [],
+          }
+        ],
+      })
+      builder.addStep(loopAction, makeElementData(), 1)
+      const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
+      expect(artifact.allowWrites).toBe(true)
     })
   })
 })

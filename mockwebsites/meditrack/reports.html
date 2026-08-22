@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Reports &amp; Analytics</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Reports</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Clinical Reports</h1>
+          <p>Appointment summaries, patient statistics, and departmental analytics.</p>
+        </div>
+        <div class="flex-gap">
+          <button class="btn btn-secondary" onclick="window.print()">🖨 Print Report</button>
+        </div>
+      </div>
+
+      <!-- Summary stat cards -->
+      <div class="stat-grid" id="report-stats" style="margin-bottom:24px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- ── Appointment Summary by Month/Status ── -->
+        <div class="card">
+          <div class="card-header">
+            <h2>📅 Appointment Summary</h2>
+            <span style="font-size:12px;color:var(--gray-500);">By month and status</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="report-section" style="padding:16px 18px 0;">
+              <h3>Monthly Breakdown — 2026</h3>
+              <div class="table-wrapper">
+                <table id="monthly-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Scheduled</th>
+                      <th>Completed</th>
+                      <th>Cancelled</th>
+                      <th>Total</th>
+                      <th>Completion %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthly-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="report-section" style="padding:16px 18px 0;">
+              <h3>By Doctor — Appointment Load</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Doctor</th>
+                      <th>Specialty</th>
+                      <th>Scheduled</th>
+                      <th>Completed</th>
+                      <th>Cancelled</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="doctor-load-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="report-section" style="padding:16px 18px;">
+              <h3>Status Distribution</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Status</th><th>Count</th><th>Percentage</th><th>Visual</th></tr>
+                  </thead>
+                  <tbody id="status-dist-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Patient Statistics ── -->
+        <div class="card">
+          <div class="card-header">
+            <h2>👥 Patient Statistics</h2>
+            <span style="font-size:12px;color:var(--gray-500);">Demographics &amp; conditions</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+
+            <div class="report-section" style="padding:16px 18px 0;">
+              <h3>Conditions Breakdown</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Condition</th><th>Patients</th><th>% of Population</th><th>Visual</th></tr>
+                  </thead>
+                  <tbody id="conditions-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="report-section" style="padding:16px 18px 0;">
+              <h3>Demographics — Gender</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Gender</th><th>Count</th><th>Percentage</th></tr>
+                  </thead>
+                  <tbody id="gender-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="report-section" style="padding:16px 18px 0;">
+              <h3>Demographics — Blood Type Distribution</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Blood Type</th><th>Patients</th><th>Percentage</th></tr>
+                  </thead>
+                  <tbody id="blood-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="report-section" style="padding:16px 18px;">
+              <h3>Age Group Distribution</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Age Group</th><th>Patients</th><th>Percentage</th><th>Visual</th></tr>
+                  </thead>
+                  <tbody id="age-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Allergy report -->
+      <div class="card mt-16">
+        <div class="card-header">
+          <h2>⚠️ Allergy &amp; Safety Report</h2>
+          <span style="font-size:12px;color:var(--gray-500);">Common allergies and at-risk patients</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Allergen</th>
+                <th>Patients Affected</th>
+                <th>Patient List</th>
+                <th>Risk Level</th>
+              </tr>
+            </thead>
+            <tbody id="allergy-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Insurance report -->
+      <div class="card mt-16">
+        <div class="card-header">
+          <h2>💳 Insurance Coverage Summary</h2>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Insurance Provider</th>
+                <th>Patients</th>
+                <th>Percentage</th>
+                <th>Visual</th>
+              </tr>
+            </thead>
+            <tbody id="insurance-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('reports');
+
+    var appts = MEDITRACK.appointments;
+    var patients = MEDITRACK.patients;
+    var totalAppts = appts.length;
+
+    // ── Summary stat cards ──────────────────────────────────
+    var scheduled = appts.filter(function(a){ return a.status === 'scheduled'; }).length;
+    var completed = appts.filter(function(a){ return a.status === 'completed'; }).length;
+    var cancelled = appts.filter(function(a){ return a.status === 'cancelled'; }).length;
+    var completionRate = totalAppts > 0 ? Math.round((completed / totalAppts) * 100) : 0;
+
+    var statsEl = document.getElementById('report-stats');
+    [
+      { label: 'Total Appointments', value: totalAppts, sub: 'All time', icon: '📊', cls: 'icon-blue' },
+      { label: 'Completion Rate', value: completionRate + '%', sub: completed + ' completed', icon: '✅', cls: 'icon-green' },
+      { label: 'Active Patients', value: patients.length, sub: 'Registered', icon: '👥', cls: 'icon-yellow' },
+      { label: 'Cancellation Rate', value: Math.round((cancelled / totalAppts) * 100) + '%', sub: cancelled + ' cancelled', icon: '❌', cls: 'icon-red' }
+    ].forEach(function(s) {
+      statsEl.innerHTML += '<div class="stat-card">' +
+        '<div class="stat-card-body">' +
+        '<div class="stat-card-label">' + s.label + '</div>' +
+        '<div class="stat-card-value">' + s.value + '</div>' +
+        '<div class="stat-card-sub">' + s.sub + '</div>' +
+        '</div>' +
+        '<div class="stat-card-icon ' + s.cls + '">' + s.icon + '</div>' +
+        '</div>';
+    });
+
+    function makeBar(pct, color) {
+      return '<div style="background:var(--gray-100);border-radius:4px;height:10px;width:120px;display:inline-block;vertical-align:middle;">' +
+        '<div style="background:' + color + ';height:10px;border-radius:4px;width:' + Math.min(100, pct) + '%;"></div>' +
+        '</div> <span style="font-size:12px;color:var(--gray-500);">' + Math.round(pct) + '%</span>';
+    }
+
+    // ── Monthly breakdown ───────────────────────────────────
+    var months = [
+      { label: 'August 2026', prefix: '2026-08' },
+      { label: 'September 2026', prefix: '2026-09' }
+    ];
+
+    var monthlyTbody = document.getElementById('monthly-tbody');
+    months.forEach(function(m) {
+      var mAppts = appts.filter(function(a){ return a.date.startsWith(m.prefix); });
+      var ms = mAppts.filter(function(a){ return a.status === 'scheduled'; }).length;
+      var mc = mAppts.filter(function(a){ return a.status === 'completed'; }).length;
+      var mcn = mAppts.filter(function(a){ return a.status === 'cancelled'; }).length;
+      var total = mAppts.length;
+      var compPct = total > 0 ? Math.round((mc / total) * 100) : 0;
+      monthlyTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:600;">' + m.label + '</td>' +
+        '<td><span class="badge badge-blue">' + ms + '</span></td>' +
+        '<td><span class="badge badge-green">' + mc + '</span></td>' +
+        '<td><span class="badge badge-red">' + mcn + '</span></td>' +
+        '<td style="font-weight:700;">' + total + '</td>' +
+        '<td>' + makeBar(compPct, 'var(--green)') + '</td>' +
+        '</tr>';
+    });
+
+    // Row for appts with no matching months
+    var otherAppts = appts.filter(function(a){
+      return !months.some(function(m){ return a.date.startsWith(m.prefix); });
+    });
+    if (otherAppts.length > 0) {
+      monthlyTbody.innerHTML += '<tr><td style="font-weight:600;color:var(--gray-400);">Other</td>' +
+        '<td>' + otherAppts.filter(function(a){ return a.status === 'scheduled'; }).length + '</td>' +
+        '<td>' + otherAppts.filter(function(a){ return a.status === 'completed'; }).length + '</td>' +
+        '<td>' + otherAppts.filter(function(a){ return a.status === 'cancelled'; }).length + '</td>' +
+        '<td>' + otherAppts.length + '</td><td>—</td></tr>';
+    }
+
+    // ── Doctor load ────────────────────────────────────────
+    var docLoadTbody = document.getElementById('doctor-load-tbody');
+    MEDITRACK.doctors.forEach(function(d) {
+      var dAppts = MEDITRACK.getAppointmentsByDoctor(d.id);
+      var ds = dAppts.filter(function(a){ return a.status === 'scheduled'; }).length;
+      var dc = dAppts.filter(function(a){ return a.status === 'completed'; }).length;
+      var dcn = dAppts.filter(function(a){ return a.status === 'cancelled'; }).length;
+      docLoadTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:600;"><a href="doctor-detail.html?id=' + d.id + '" style="color:var(--accent);text-decoration:none;">' + d.name + '</a></td>' +
+        '<td>' + d.specialty + '</td>' +
+        '<td><span class="badge badge-blue">' + ds + '</span></td>' +
+        '<td><span class="badge badge-green">' + dc + '</span></td>' +
+        '<td><span class="badge badge-red">' + dcn + '</span></td>' +
+        '<td style="font-weight:700;">' + dAppts.length + '</td>' +
+        '</tr>';
+    });
+
+    // ── Status distribution ─────────────────────────────────
+    var statusDistTbody = document.getElementById('status-dist-tbody');
+    [
+      { status: 'Scheduled', count: scheduled, color: 'var(--accent)' },
+      { status: 'Completed', count: completed, color: 'var(--green)' },
+      { status: 'Cancelled', count: cancelled, color: 'var(--red)' }
+    ].forEach(function(s) {
+      var pct = totalAppts > 0 ? (s.count / totalAppts) * 100 : 0;
+      statusDistTbody.innerHTML += '<tr>' +
+        '<td>' + MEDITRACK.getStatusBadge(s.status.toLowerCase()) + '</td>' +
+        '<td style="font-weight:700;">' + s.count + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '<td>' + makeBar(pct, s.color) + '</td>' +
+        '</tr>';
+    });
+
+    // ── Conditions breakdown ────────────────────────────────
+    var condCount = {};
+    patients.forEach(function(p) {
+      p.conditions.forEach(function(c) {
+        condCount[c] = (condCount[c] || 0) + 1;
+      });
+    });
+    var condSorted = Object.entries(condCount).sort(function(a, b){ return b[1] - a[1]; });
+    var condsTbody = document.getElementById('conditions-tbody');
+    condSorted.forEach(function(kv) {
+      var pct = (kv[1] / patients.length) * 100;
+      condsTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:500;">' + kv[0] + '</td>' +
+        '<td style="font-weight:700;">' + kv[1] + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '<td>' + makeBar(pct, 'var(--accent)') + '</td>' +
+        '</tr>';
+    });
+
+    // ── Gender ─────────────────────────────────────────────
+    var genderCount = {};
+    patients.forEach(function(p) { genderCount[p.gender] = (genderCount[p.gender] || 0) + 1; });
+    var genderTbody = document.getElementById('gender-tbody');
+    Object.entries(genderCount).forEach(function(kv) {
+      var pct = (kv[1] / patients.length) * 100;
+      genderTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:600;">' + kv[0] + '</td>' +
+        '<td>' + kv[1] + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '</tr>';
+    });
+
+    // ── Blood type ─────────────────────────────────────────
+    var bloodCount = {};
+    patients.forEach(function(p) { bloodCount[p.bloodType] = (bloodCount[p.bloodType] || 0) + 1; });
+    var bloodSorted = Object.entries(bloodCount).sort(function(a, b){ return b[1] - a[1]; });
+    var bloodTbody = document.getElementById('blood-tbody');
+    bloodSorted.forEach(function(kv) {
+      var pct = (kv[1] / patients.length) * 100;
+      bloodTbody.innerHTML += '<tr>' +
+        '<td>' + MEDITRACK.getBloodTypeBadge(kv[0]) + '</td>' +
+        '<td style="font-weight:700;">' + kv[1] + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '</tr>';
+    });
+
+    // ── Age groups ─────────────────────────────────────────
+    var ageGroups = [
+      { label: '18–30', min: 18, max: 30, color: '#6366f1' },
+      { label: '31–45', min: 31, max: 45, color: '#0ea5e9' },
+      { label: '46–60', min: 46, max: 60, color: '#f59e0b' },
+      { label: '61–75', min: 61, max: 75, color: '#ef4444' },
+      { label: '76+',   min: 76, max: 150, color: '#8b5cf6' }
+    ];
+    var ageTbody = document.getElementById('age-tbody');
+    ageGroups.forEach(function(g) {
+      var count = patients.filter(function(p) {
+        var age = MEDITRACK.calculateAge(p.dob);
+        return age >= g.min && age <= g.max;
+      }).length;
+      var pct = (count / patients.length) * 100;
+      ageTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:600;">' + g.label + ' years</td>' +
+        '<td style="font-weight:700;">' + count + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '<td>' + makeBar(pct, g.color) + '</td>' +
+        '</tr>';
+    });
+
+    // ── Allergy report ─────────────────────────────────────
+    var allergyMap = {};
+    patients.forEach(function(p) {
+      p.allergies.forEach(function(a) {
+        if (a.toLowerCase() === 'none known') return;
+        if (!allergyMap[a]) allergyMap[a] = [];
+        allergyMap[a].push(p);
+      });
+    });
+    var allergySorted = Object.entries(allergyMap).sort(function(a, b){ return b[1].length - a[1].length; });
+    var allergyTbody = document.getElementById('allergy-tbody');
+    allergySorted.forEach(function(kv) {
+      var allergen = kv[0], pts = kv[1];
+      var risk = pts.length >= 4 ? '<span class="badge badge-red">High</span>' :
+                 pts.length >= 2 ? '<span class="badge badge-yellow">Medium</span>' :
+                                   '<span class="badge badge-gray">Low</span>';
+      allergyTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:700;">' + allergen + '</td>' +
+        '<td><span class="badge badge-navy">' + pts.length + '</span></td>' +
+        '<td style="font-size:12px;">' + pts.map(function(p){ return '<a href="patient-detail.html?id=' + p.id + '" style="color:var(--accent);text-decoration:none;">' + p.name + '</a>'; }).join(', ') + '</td>' +
+        '<td>' + risk + '</td>' +
+        '</tr>';
+    });
+
+    // ── Insurance report ───────────────────────────────────
+    var insuranceCount = {};
+    patients.forEach(function(p) {
+      insuranceCount[p.insurance] = (insuranceCount[p.insurance] || 0) + 1;
+    });
+    var insuranceSorted = Object.entries(insuranceCount).sort(function(a, b){ return b[1] - a[1]; });
+    var insuranceTbody = document.getElementById('insurance-tbody');
+    insuranceSorted.forEach(function(kv) {
+      var pct = (kv[1] / patients.length) * 100;
+      insuranceTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:600;">' + kv[0] + '</td>' +
+        '<td style="font-weight:700;">' + kv[1] + '</td>' +
+        '<td>' + Math.round(pct) + '%</td>' +
+        '<td>' + makeBar(pct, 'var(--navy)') + '</td>' +
+        '</tr>';
+    });
+  </script>
+</body>
+</html>

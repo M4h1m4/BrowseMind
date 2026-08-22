@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Detail — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html" class="active"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <a href="orders.html">Purchase Orders</a>
+        <span class="sep">›</span>
+        <span class="current" id="bc-order-id">Loading…</span>
+      </div>
+
+      <div id="order-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const params = new URL(location.href).searchParams;
+  const orderId = params.get('id') || 'PO-2026-001';
+
+  const order = STOCKWISE.purchaseOrders.find(o => o.id === orderId);
+  const suppliers = STOCKWISE.suppliers;
+  const products = STOCKWISE.products;
+
+  function getSupplier(id) { return suppliers.find(s => s.id === id) || { name: 'Unknown' }; }
+  function getProduct(id) { return products.find(p => p.id === id) || { name: 'Unknown', sku: '—', unit: 'each' }; }
+
+  function statusBadge(status) {
+    const map = {
+      draft: 'badge-draft', submitted: 'badge-submitted',
+      approved: 'badge-approved', received: 'badge-received', cancelled: 'badge-cancelled'
+    };
+    const labels = {
+      draft: '○ Draft', submitted: '⋯ Submitted', approved: '✓ Approved',
+      received: '✔ Received', cancelled: '✕ Cancelled'
+    };
+    return `<span class="badge ${map[status] || 'badge-draft'}" style="font-size:13px; padding:5px 14px;">${labels[status] || status}</span>`;
+  }
+
+  function starsHTML(rating) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) html += i <= rating ? '★' : '<span class="empty">★</span>';
+    return `<span class="stars">${html}</span>`;
+  }
+
+  function formatDate(d) {
+    return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  if (!order) {
+    document.getElementById('order-content').innerHTML = `
+      <div class="alert alert-danger">
+        <span class="alert-icon">❌</span>
+        <div class="alert-body"><strong>Order Not Found</strong> No purchase order with ID "${orderId}" exists.</div>
+      </div>
+      <a href="orders.html" class="btn btn-secondary">← Back to Orders</a>`;
+    document.getElementById('bc-order-id').textContent = 'Not Found';
+  } else {
+    const supplier = getSupplier(order.supplierId);
+    const isOverdue = order.status !== 'received' && order.status !== 'cancelled'
+      && new Date(order.expectedDelivery) < new Date();
+
+    document.getElementById('bc-order-id').textContent = order.id;
+    document.title = `${order.id} — StockWise`;
+
+    // Build action buttons based on status
+    let actionButtons = '';
+    if (order.status === 'draft' || order.status === 'submitted') {
+      actionButtons += `<button class="btn btn-danger" onclick="cancelOrder()">✕ Cancel Order</button>`;
+    }
+    if (order.status === 'submitted') {
+      actionButtons += `<button class="btn btn-blue" onclick="approveOrder()">✓ Approve Order</button>`;
+    }
+    if (order.status === 'approved') {
+      actionButtons += `<button class="btn btn-primary" onclick="receiveOrder()">📦 Mark as Received</button>`;
+    }
+    actionButtons += `<a href="orders.html" class="btn btn-secondary">← Back to Orders</a>`;
+
+    // Line items
+    const lineItemsRows = order.items.map(item => {
+      const prod = getProduct(item.productId);
+      const lineTotal = item.qty * item.unitPrice;
+      return `<tr>
+        <td><a href="product-detail.html?id=${item.productId}" style="font-weight:600;">${prod.name}</a></td>
+        <td><span class="mono">${prod.sku}</span></td>
+        <td class="text-bold">${item.qty}</td>
+        <td>${prod.unit}</td>
+        <td>$${item.unitPrice.toFixed(2)}</td>
+        <td class="text-bold">$${lineTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+      </tr>`;
+    }).join('');
+
+    const overdueAlert = isOverdue ? `
+      <div class="alert alert-danger">
+        <span class="alert-icon">⏰</span>
+        <div class="alert-body">
+          <strong>Delivery Overdue</strong>
+          This order was expected by ${formatDate(order.expectedDelivery)} and has not been marked as received. Contact the supplier.
+        </div>
+      </div>` : '';
+
+    const statusAlert = order.status === 'cancelled' ? `
+      <div class="alert alert-warning">
+        <span class="alert-icon">✕</span>
+        <div class="alert-body"><strong>This order has been cancelled.</strong> No further action can be taken.</div>
+      </div>` : '';
+
+    document.getElementById('order-content').innerHTML = `
+      ${overdueAlert}
+      ${statusAlert}
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1><span class="mono" style="font-size:20px;">${order.id}</span></h1>
+          <div style="margin-top:8px; display:flex; align-items:center; gap:12px;">
+            ${statusBadge(order.status)}
+            <span class="text-muted text-small">Ordered: ${formatDate(order.orderDate)}</span>
+            <span class="text-muted text-small">Expected: ${formatDate(order.expectedDelivery)}</span>
+          </div>
+        </div>
+        <div class="page-header-actions">
+          ${actionButtons}
+        </div>
+      </div>
+
+      <!-- Status notification (hidden by default, shown on action) -->
+      <div id="status-msg" class="alert alert-success hidden">
+        <span class="alert-icon">✓</span>
+        <div class="alert-body"><strong id="status-msg-text"></strong></div>
+      </div>
+
+      <div class="two-col" style="margin-bottom:20px;">
+        <!-- Order Details -->
+        <div class="card mb-0">
+          <div class="card-header"><h3>Order Details</h3></div>
+          <div class="info-grid">
+            <div class="info-grid-item">
+              <div class="info-label">PO Number</div>
+              <div class="info-value"><span class="mono">${order.id}</span></div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Status</div>
+              <div class="info-value">${statusBadge(order.status)}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Order Date</div>
+              <div class="info-value">${formatDate(order.orderDate)}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Expected Delivery</div>
+              <div class="info-value ${isOverdue ? 'text-red' : ''}">${formatDate(order.expectedDelivery)}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Line Items</div>
+              <div class="info-value">${order.items.length} product${order.items.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Order Total</div>
+              <div class="info-value large text-green">$${order.totalAmount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supplier Card -->
+        <div class="card mb-0">
+          <div class="card-header">
+            <h3>Supplier</h3>
+            <a href="supplier-detail.html?id=${supplier.id}" class="btn btn-sm btn-secondary">View Profile</a>
+          </div>
+          <div class="card-body">
+            <div class="supplier-card">
+              <div class="supplier-card-header">
+                <div>
+                  <h4>${supplier.name}</h4>
+                  <div style="margin-top:4px;">${starsHTML(supplier.rating)} <span style="font-size:11px; color:#6b7280;">(${supplier.rating}/5)</span></div>
+                </div>
+              </div>
+              <div class="supplier-detail-row"><span>Contact:</span> ${supplier.contactPerson}</div>
+              <div class="supplier-detail-row"><span>Email:</span> <a href="mailto:${supplier.email}">${supplier.email}</a></div>
+              <div class="supplier-detail-row"><span>Phone:</span> ${supplier.phone}</div>
+              <div class="supplier-detail-row"><span>Address:</span> ${supplier.address}</div>
+              <div class="supplier-detail-row"><span>Terms:</span> ${supplier.paymentTerms}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Line Items</h3>
+          <span class="text-muted text-small">${order.items.length} product(s) ordered</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Qty Ordered</th>
+                <th>Unit</th>
+                <th>Unit Price</th>
+                <th>Line Total</th>
+              </tr>
+            </thead>
+            <tbody>${lineItemsRows}</tbody>
+          </table>
+        </div>
+        <div class="card-footer" style="display:flex; justify-content:flex-end; gap:0;">
+          <div style="min-width:280px;">
+            <div style="display:flex; justify-content:space-between; padding:5px 0; font-size:13px; color:#374151;">
+              <span>Subtotal (${order.items.length} line items)</span>
+              <span>$${order.totalAmount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:5px 0; font-size:13px; color:#6b7280;">
+              <span>Shipping / Handling</span>
+              <span>Included</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:15px; font-weight:800; color:#1a3a2a; border-top:2px solid #e5e7eb; margin-top:5px;">
+              <span>Order Total</span>
+              <span class="text-green">$${order.totalAmount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${order.notes ? `
+      <!-- Notes -->
+      <div class="card">
+        <div class="card-header"><h3>Order Notes</h3></div>
+        <div class="card-body">
+          <div class="notes-block">
+            <div class="notes-label">Internal Notes</div>
+            ${order.notes}
+          </div>
+        </div>
+      </div>` : ''}
+    `;
+  }
+
+  function approveOrder() {
+    const msg = document.getElementById('status-msg');
+    document.getElementById('status-msg-text').textContent = `Order ${orderId} has been approved. Supplier will be notified.`;
+    msg.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function receiveOrder() {
+    const msg = document.getElementById('status-msg');
+    document.getElementById('status-msg-text').textContent = `Order ${orderId} marked as received. Inventory will be updated upon warehouse confirmation.`;
+    msg.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelOrder() {
+    if (confirm(`Are you sure you want to cancel order ${orderId}? This action cannot be undone.`)) {
+      const msg = document.getElementById('status-msg');
+      msg.className = 'alert alert-warning';
+      document.getElementById('status-msg-text').textContent = `Order ${orderId} has been cancelled.`;
+      msg.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+</script>
+</body>
+</html>

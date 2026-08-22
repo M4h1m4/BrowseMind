@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Appointment — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Book Appointment</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <a href="appointments.html">Appointments</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Book New Appointment</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Book New Appointment</h1>
+          <p>Schedule a new patient–doctor appointment.</p>
+        </div>
+        <a href="appointments.html" class="btn btn-secondary">← Back to Appointments</a>
+      </div>
+
+      <div id="success-alert" class="alert alert-success" style="display:none;">
+        ✅ Appointment booked successfully! The patient and doctor have been notified.
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Appointment Details</h2>
+          </div>
+          <div class="card-body">
+            <form id="appt-form" onsubmit="submitForm(event)">
+              <div class="form-grid">
+
+                <div class="form-group">
+                  <label for="patient-select">Patient *</label>
+                  <select id="patient-select" name="patient" required>
+                    <option value="">— Select Patient —</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="doctor-select">Doctor *</label>
+                  <select id="doctor-select" name="doctor" required>
+                    <option value="">— Select Doctor —</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="appt-date">Date *</label>
+                  <input type="date" id="appt-date" name="date" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="appt-time">Time Slot *</label>
+                  <select id="appt-time" name="time" required>
+                    <option value="">— Select Time —</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="09:30">9:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="13:30">1:30 PM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="14:30">2:30 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                    <option value="15:30">3:30 PM</option>
+                    <option value="16:00">4:00 PM</option>
+                    <option value="16:30">4:30 PM</option>
+                    <option value="17:00">5:00 PM</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="appt-type">Appointment Type</label>
+                  <select id="appt-type" name="type">
+                    <option value="follow-up">Follow-Up Visit</option>
+                    <option value="new">New Patient Consultation</option>
+                    <option value="routine">Routine Check-Up</option>
+                    <option value="urgent">Urgent Visit</option>
+                    <option value="procedure">Procedure / Test</option>
+                    <option value="telehealth">Telehealth Visit</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="appt-priority">Priority</label>
+                  <select id="appt-priority" name="priority">
+                    <option value="routine">Routine</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="emergency">Emergency</option>
+                  </select>
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="appt-notes">Clinical Notes / Reason for Visit</label>
+                  <textarea id="appt-notes" name="notes" rows="4" placeholder="Enter reason for visit, symptoms, or additional notes for the doctor…"></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="appt-instructions">Patient Instructions</label>
+                  <textarea id="appt-instructions" name="instructions" rows="2" placeholder="e.g. Bring insurance card, fast for 8 hours before blood draw, etc."></textarea>
+                </div>
+
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">✓ Confirm Appointment</button>
+                <a href="appointments.html" class="btn btn-secondary">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Sidebar info -->
+        <div>
+          <div class="card mb-16" id="patient-info-card" style="display:none;">
+            <div class="card-header"><h2>Patient Info</h2></div>
+            <div class="card-body" id="patient-info-body"></div>
+          </div>
+
+          <div class="card mb-16" id="doctor-info-card" style="display:none;">
+            <div class="card-header"><h2>Doctor Schedule</h2></div>
+            <div class="card-body" id="doctor-info-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2>Booking Guidelines</h2></div>
+            <div class="card-body">
+              <ul style="padding-left:16px;font-size:13px;line-height:1.8;color:var(--gray-600);">
+                <li>Appointments run 30–60 minutes</li>
+                <li>New patient visits require 60 minutes</li>
+                <li>Cancellations must be made 24 hrs in advance</li>
+                <li>Confirm patient insurance before scheduling</li>
+                <li>Check doctor availability in the schedule panel</li>
+                <li>Emergency visits: contact triage directly</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('appointments');
+
+    // Pre-fill from URL params
+    var params = new URL(location.href).searchParams;
+    var prePatientId = params.get('patientId') || '';
+
+    // Populate patient dropdown
+    var patientSelect = document.getElementById('patient-select');
+    MEDITRACK.patients.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.id + ' — ' + p.name;
+      if (p.id === prePatientId) opt.selected = true;
+      patientSelect.appendChild(opt);
+    });
+
+    // Populate doctor dropdown
+    var doctorSelect = document.getElementById('doctor-select');
+    MEDITRACK.doctors.forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name + ' (' + d.specialty + ')';
+      doctorSelect.appendChild(opt);
+    });
+
+    // Set default date to tomorrow
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('appt-date').value = tomorrow.toISOString().slice(0, 10);
+
+    // Show patient info card when patient selected
+    patientSelect.addEventListener('change', function() {
+      var p = MEDITRACK.getPatientById(this.value);
+      var card = document.getElementById('patient-info-card');
+      var body = document.getElementById('patient-info-body');
+      if (!p) { card.style.display = 'none'; return; }
+      card.style.display = '';
+      body.innerHTML =
+        '<div class="info-item mb-8"><div class="info-label">Name</div><div class="info-value">' + p.name + '</div></div>' +
+        '<div class="info-item mb-8"><div class="info-label">DOB / Age</div><div class="info-value">' + MEDITRACK.formatDate(p.dob) + ' (age ' + MEDITRACK.calculateAge(p.dob) + ')</div></div>' +
+        '<div class="info-item mb-8"><div class="info-label">Blood Type</div><div class="info-value">' + MEDITRACK.getBloodTypeBadge(p.bloodType) + '</div></div>' +
+        '<div class="info-item mb-8"><div class="info-label">Insurance</div><div class="info-value">' + p.insurance + '</div></div>' +
+        '<div class="info-item mb-8"><div class="info-label">Conditions</div><div class="info-value">' + p.conditions.join(', ') + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Allergies</div><div class="info-value" style="color:var(--red);">' + p.allergies.join(', ') + '</div></div>';
+    });
+
+    // Show doctor schedule when doctor selected
+    doctorSelect.addEventListener('change', function() {
+      var d = MEDITRACK.getDoctorById(this.value);
+      var card = document.getElementById('doctor-info-card');
+      var body = document.getElementById('doctor-info-body');
+      if (!d) { card.style.display = 'none'; return; }
+      card.style.display = '';
+      var schedRows = Object.entries(d.schedule).map(function(kv) {
+        var day = kv[0], hours = kv[1];
+        var avail = hours !== 'Off';
+        return '<div class="dept-info-row">' +
+          '<span class="dept-info-label">' + day + '</span>' +
+          '<span class="dept-info-value ' + (avail ? 'avail-yes' : 'avail-no') + '">' + hours + '</span>' +
+          '</div>';
+      }).join('');
+      body.innerHTML =
+        '<div class="info-item mb-12"><div class="info-label">Department</div><div class="info-value">' + d.department + '</div></div>' +
+        '<div class="info-item mb-12"><div class="info-label">Specialty</div><div class="info-value">' + d.specialty + '</div></div>' +
+        '<hr style="margin:8px 0;border:none;border-top:1px solid var(--gray-200);">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:6px;">WEEKLY SCHEDULE</div>' +
+        schedRows;
+    });
+
+    // Trigger if pre-filled
+    if (prePatientId) {
+      patientSelect.dispatchEvent(new Event('change'));
+    }
+
+    function submitForm(e) {
+      e.preventDefault();
+      var patient = patientSelect.value;
+      var doctor = doctorSelect.value;
+      var date = document.getElementById('appt-date').value;
+      var time = document.getElementById('appt-time').value;
+
+      if (!patient || !doctor || !date || !time) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      var successAlert = document.getElementById('success-alert');
+      var patientObj = MEDITRACK.getPatientById(patient);
+      var doctorObj = MEDITRACK.getDoctorById(doctor);
+
+      successAlert.innerHTML = '✅ Appointment booked successfully! ' +
+        '<strong>' + (patientObj ? patientObj.name : patient) + '</strong> has been scheduled with ' +
+        '<strong>' + (doctorObj ? doctorObj.name : doctor) + '</strong> on ' +
+        MEDITRACK.formatDate(date) + ' at ' + MEDITRACK.formatTime(time) + '.';
+      successAlert.style.display = 'flex';
+      successAlert.scrollIntoView({ behavior: 'smooth' });
+
+      document.getElementById('appt-form').reset();
+      document.getElementById('patient-info-card').style.display = 'none';
+      document.getElementById('doctor-info-card').style.display = 'none';
+      // Restore default date
+      var tom = new Date();
+      tom.setDate(tom.getDate() + 1);
+      document.getElementById('appt-date').value = tom.toISOString().slice(0, 10);
+    }
+  </script>
+</body>
+</html>

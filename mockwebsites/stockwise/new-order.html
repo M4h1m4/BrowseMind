@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Purchase Order — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html" class="active"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <a href="orders.html">Purchase Orders</a>
+        <span class="sep">›</span>
+        <span class="current">Create New Order</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Create Purchase Order</h1>
+          <p>Select a supplier, add line items, and submit or save as draft.</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="orders.html" class="btn btn-secondary">← Cancel</a>
+        </div>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator" style="margin-bottom:24px;">
+        <div class="step active">
+          <div class="step-num">1</div>
+          <span>Select Supplier</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step active" id="step2-indicator">
+          <div class="step-num">2</div>
+          <span>Add Line Items</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" id="step3-indicator">
+          <div class="step-num">3</div>
+          <span>Review &amp; Submit</span>
+        </div>
+      </div>
+
+      <!-- Success Alert (hidden) -->
+      <div id="success-alert" class="alert alert-success hidden">
+        <span class="alert-icon">✓</span>
+        <div class="alert-body">
+          <strong id="success-msg">Order Saved</strong>
+          Your purchase order has been created. <a href="orders.html">View all orders</a>.
+        </div>
+      </div>
+
+      <div class="order-layout">
+        <!-- Main Form -->
+        <div>
+          <!-- Step 1: Supplier -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Step 1 — Select Supplier</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Supplier <span class="required">*</span></label>
+                  <select class="form-control" id="supplier-select" onchange="onSupplierChange()">
+                    <option value="">— Select a Supplier —</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Expected Delivery Date <span class="required">*</span></label>
+                  <input type="date" class="form-control" id="delivery-date">
+                </div>
+              </div>
+              <!-- Supplier info reveal -->
+              <div id="supplier-info-reveal" class="supplier-info-box hidden">
+                <div class="s-name" id="si-name">—</div>
+                <div class="s-row"><span>Contact: </span><span id="si-contact">—</span></div>
+                <div class="s-row"><span>Email: </span><span id="si-email">—</span></div>
+                <div class="s-row"><span>Payment Terms: </span><span id="si-terms">—</span></div>
+                <div class="s-row"><span>Rating: </span><span id="si-rating">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Line Items -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Step 2 — Line Items</h3>
+              <button class="btn btn-sm btn-primary" onclick="addLineItem()">+ Add Item</button>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="line-items-table" id="line-items-table">
+                  <thead>
+                    <tr>
+                      <th style="width:35%;">Product</th>
+                      <th style="width:15%;">Qty</th>
+                      <th style="width:15%;">Unit Price ($)</th>
+                      <th style="width:15%;">Line Total</th>
+                      <th style="width:20%;">Current Stock</th>
+                      <th style="width:40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="line-items-tbody">
+                    <!-- Rows added by JS -->
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding:12px 16px; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn btn-sm btn-ghost" onclick="addLineItem()">+ Add Another Item</button>
+                <div style="font-size:13px; color:#6b7280;">
+                  <span id="line-count">0</span> item(s) &nbsp;|&nbsp;
+                  Order Total: <strong class="text-green" id="order-total-inline">$0.00</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Notes -->
+          <div class="card">
+            <div class="card-header"><h3>Step 3 — Order Notes</h3></div>
+            <div class="card-body">
+              <div class="form-group mb-0">
+                <label class="form-label">Internal Notes / Instructions</label>
+                <textarea class="form-control" id="order-notes" rows="4" placeholder="Optional: Add delivery instructions, priority notes, or procurement justification…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div style="display:flex; gap:12px;">
+            <button class="btn btn-secondary btn-lg" onclick="saveAsDraft()">💾 Save as Draft</button>
+            <button class="btn btn-primary btn-lg" onclick="submitOrder()">📤 Submit Order</button>
+          </div>
+        </div>
+
+        <!-- Order Summary Sidebar -->
+        <div class="order-sidebar">
+          <h3>Order Summary</h3>
+
+          <!-- Supplier info in sidebar -->
+          <div id="sidebar-supplier-info" style="margin-bottom:14px; display:none;">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:#6b7280; font-weight:600; margin-bottom:6px;">Supplier</div>
+            <div style="font-weight:700; color:#1a3a2a; font-size:13.5px;" id="sb-name">—</div>
+            <div style="font-size:12px; color:#374151; margin-top:3px;" id="sb-terms">—</div>
+            <div style="font-size:12px; color:#374151; margin-top:2px;" id="sb-contact">—</div>
+          </div>
+
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:#6b7280; font-weight:600; margin-bottom:8px;">Line Items</div>
+
+          <div id="sidebar-items">
+            <div style="color:#9ca3af; font-size:12.5px; font-style:italic; padding:8px 0;">No items added yet.</div>
+          </div>
+
+          <div class="total-row" style="margin-top:12px;">
+            <span>Items</span>
+            <span id="sb-item-count">0</span>
+          </div>
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span id="sb-subtotal">$0.00</span>
+          </div>
+          <div class="total-row">
+            <span>Shipping</span>
+            <span>Included</span>
+          </div>
+          <div class="total-row grand-total">
+            <span>Total</span>
+            <span id="sb-total" class="text-green">$0.00</span>
+          </div>
+
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e5e7eb;">
+            <div style="font-size:11px; color:#6b7280; margin-bottom:6px;">Delivery Date</div>
+            <div style="font-weight:700; color:#1a3a2a; font-size:13px;" id="sb-delivery">Not set</div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <button class="btn btn-primary" style="width:100%;" onclick="submitOrder()">Submit Order</button>
+            <button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="saveAsDraft()">Save as Draft</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+  const suppliers = STOCKWISE.suppliers;
+  const products = STOCKWISE.products;
+
+  // Set default delivery date (2 weeks from today)
+  const deliveryInput = document.getElementById('delivery-date');
+  const twoWeeks = new Date();
+  twoWeeks.setDate(twoWeeks.getDate() + 14);
+  deliveryInput.value = twoWeeks.toISOString().split('T')[0];
+  deliveryInput.addEventListener('change', updateSidebarDelivery);
+
+  // Populate supplier dropdown
+  const supSelect = document.getElementById('supplier-select');
+  suppliers.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} — ${s.paymentTerms} — Rating: ${s.rating}/5`;
+    supSelect.appendChild(opt);
+  });
+
+  function starsHTML(r) {
+    let h = '';
+    for (let i = 1; i <= 5; i++) h += i <= r ? '★' : '☆';
+    return h;
+  }
+
+  function onSupplierChange() {
+    const id = supSelect.value;
+    const reveal = document.getElementById('supplier-info-reveal');
+    const sbInfo = document.getElementById('sidebar-supplier-info');
+    if (!id) {
+      reveal.classList.add('hidden');
+      sbInfo.style.display = 'none';
+      return;
+    }
+    const s = suppliers.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('si-name').textContent = s.name;
+    document.getElementById('si-contact').textContent = s.contactPerson;
+    document.getElementById('si-email').textContent = s.email;
+    document.getElementById('si-terms').textContent = s.paymentTerms;
+    document.getElementById('si-rating').textContent = starsHTML(s.rating) + ` (${s.rating}/5)`;
+    reveal.classList.remove('hidden');
+
+    document.getElementById('sb-name').textContent = s.name;
+    document.getElementById('sb-terms').textContent = `Terms: ${s.paymentTerms}`;
+    document.getElementById('sb-contact').textContent = `Contact: ${s.contactPerson}`;
+    sbInfo.style.display = 'block';
+
+    updateSummary();
+  }
+
+  function updateSidebarDelivery() {
+    const val = deliveryInput.value;
+    const el = document.getElementById('sb-delivery');
+    if (val) {
+      el.textContent = new Date(val + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+      });
+    } else {
+      el.textContent = 'Not set';
+    }
+  }
+  updateSidebarDelivery();
+
+  let rowCount = 0;
+
+  function addLineItem() {
+    rowCount++;
+    const tbody = document.getElementById('line-items-tbody');
+    const row = document.createElement('tr');
+    row.id = `row-${rowCount}`;
+    row.innerHTML = `
+      <td>
+        <select class="form-control" id="prod-${rowCount}" onchange="onProductChange(${rowCount})" style="width:100%;">
+          <option value="">— Select Product —</option>
+          ${products.map(p => `<option value="${p.id}" data-price="${p.unitPrice}" data-stock="${p.stockLevel}" data-unit="${p.unit}">${p.name} (${p.sku})</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <input type="number" id="qty-${rowCount}" class="form-control" value="1" min="1" style="width:70px;" oninput="recalcRow(${rowCount})">
+      </td>
+      <td>
+        <input type="number" id="price-${rowCount}" class="form-control" value="" min="0" step="0.01" placeholder="0.00" style="width:90px;" oninput="recalcRow(${rowCount})">
+      </td>
+      <td id="total-${rowCount}" style="font-weight:700; color:#1a3a2a;">$0.00</td>
+      <td id="stock-${rowCount}" style="font-size:12px; color:#6b7280;">—</td>
+      <td><button class="remove-row-btn" onclick="removeRow(${rowCount})" title="Remove">✕</button></td>
+    `;
+    tbody.appendChild(row);
+    updateSummary();
+  }
+
+  function onProductChange(rowId) {
+    const sel = document.getElementById(`prod-${rowId}`);
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt.value) return;
+    const price = parseFloat(opt.dataset.price) || 0;
+    const stock = parseInt(opt.dataset.stock) || 0;
+    const unit = opt.dataset.unit || 'each';
+    document.getElementById(`price-${rowId}`).value = price.toFixed(2);
+    const stockEl = document.getElementById(`stock-${rowId}`);
+    const cls = stock <= 5 ? 'text-red text-bold' : stock <= 15 ? 'text-orange text-bold' : 'text-muted';
+    stockEl.innerHTML = `<span class="${cls}">Stock: ${stock} ${unit}</span>`;
+    recalcRow(rowId);
+  }
+
+  function recalcRow(rowId) {
+    const qty = parseFloat(document.getElementById(`qty-${rowId}`).value) || 0;
+    const price = parseFloat(document.getElementById(`price-${rowId}`).value) || 0;
+    const total = qty * price;
+    document.getElementById(`total-${rowId}`).textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    updateSummary();
+  }
+
+  function removeRow(rowId) {
+    const row = document.getElementById(`row-${rowId}`);
+    if (row) row.remove();
+    updateSummary();
+  }
+
+  function getLineItems() {
+    const items = [];
+    document.querySelectorAll('#line-items-tbody tr').forEach(row => {
+      const id = row.id.replace('row-', '');
+      const prodSel = document.getElementById(`prod-${id}`);
+      const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+      const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+      if (prodSel && prodSel.value && qty > 0 && price > 0) {
+        const opt = prodSel.options[prodSel.selectedIndex];
+        items.push({ name: opt.text, qty, price, total: qty * price });
+      }
+    });
+    return items;
+  }
+
+  function updateSummary() {
+    const items = getLineItems();
+    const grandTotal = items.reduce((s, i) => s + i.total, 0);
+
+    // Line count
+    const rowCount = document.querySelectorAll('#line-items-tbody tr').length;
+    document.getElementById('line-count').textContent = rowCount;
+    document.getElementById('order-total-inline').textContent = `$${grandTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+    // Sidebar
+    document.getElementById('sb-item-count').textContent = items.length;
+    document.getElementById('sb-subtotal').textContent = `$${grandTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('sb-total').textContent = `$${grandTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+    const sbItems = document.getElementById('sidebar-items');
+    if (items.length === 0) {
+      sbItems.innerHTML = `<div style="color:#9ca3af; font-size:12.5px; font-style:italic; padding:8px 0;">No items added yet.</div>`;
+    } else {
+      sbItems.innerHTML = items.map(i => `
+        <div style="display:flex; justify-content:space-between; padding:5px 0; font-size:12px; border-bottom:1px solid #e5e7eb;">
+          <span style="color:#374151; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i.name.split(' (')[0]} × ${i.qty}</span>
+          <span style="font-weight:700; color:#1a3a2a; flex-shrink:0;">$${i.total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        </div>`).join('');
+    }
+  }
+
+  function saveAsDraft() {
+    const supId = supSelect.value;
+    if (!supId) { alert('Please select a supplier before saving.'); return; }
+    showSuccess('Draft Saved', 'draft');
+  }
+
+  function submitOrder() {
+    const supId = supSelect.value;
+    if (!supId) { alert('Please select a supplier.'); return; }
+    const items = getLineItems();
+    if (items.length === 0) { alert('Please add at least one line item before submitting.'); return; }
+    showSuccess('Order Submitted', 'submitted');
+    document.getElementById('step3-indicator').classList.add('active');
+  }
+
+  function showSuccess(label, status) {
+    const el = document.getElementById('success-alert');
+    const supplier = suppliers.find(s => s.id === supSelect.value);
+    const total = getLineItems().reduce((s, i) => s + i.total, 0);
+    const newPONum = `PO-2026-${String(Math.floor(Math.random() * 900) + 23).padStart(3,'0')}`;
+    document.getElementById('success-msg').innerHTML =
+      `${label}: <span class="mono">${newPONum}</span> — ${supplier ? supplier.name : 'Supplier'} — $${total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}. ` +
+      `Status: <strong>${status}</strong>. <a href="orders.html">View all orders</a>.`;
+    el.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Add first row by default
+  addLineItem();
+</script>
+</body>
+</html>
