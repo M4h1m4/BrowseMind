@@ -1,8 +1,65 @@
+version: '3.8'
+
 services:
-  test:
+  browsemind:
+    image: interfaceai_browsemind
     build:
       context: .
-      dockerfile: Dockerfile.test
+      target: browsemind
+    ports:
+      - "3000:3000"
     environment:
-      - DATABASE_PATH=:memory:
-      - NODE_ENV=test
+      - NODE_ENV=production
+      - PORT=3000
+      # OpenAI key must be provided at runtime
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      # Persist evidence, artifacts, DB
+      - ./evidence:/app/evidence
+      - ./db:/app/db
+    depends_on:
+      - meditrack
+      - stockwise
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  meditrack:
+    image: interfaceai_mediatrack
+    build:
+      context: .
+      target: meditrack
+    ports:
+      - "4300:4300"
+    environment:
+      - NODE_ENV=production
+      - PORT=4300
+    volumes:
+      # Persist MediTrack DB
+      - ./db/meditrack.db:/app/meditrack.db
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4300/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  stockwise:
+    image: interfaceai_stockwise
+    build:
+      context: .
+      target: stockwise
+    ports:
+      - "4301:4301"
+    environment:
+      - NODE_ENV=production
+      - PORT=4301
+    volumes:
+      # Persist StockWise DB
+      - ./db/stockwise.db:/app/stockwise.db
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4301/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
