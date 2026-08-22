@@ -624,17 +624,15 @@ function renderStatus(data) {
 // ── Resume / Cancel ───────────────────────────────────────────────────────────
 async function resumeRun(notes) {
   if (!currentRunId) return
+  renderStatus({ status: 'running', currentStep: '?' })
+  startPolling()
   try {
-    const res = await fetch(`/api/v1/runs/${currentRunId}/resume`, {
+    await fetch(`/api/v1/runs/${currentRunId}/resume`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ humanNotes: notes || '' })
     })
-    if (res.ok) {
-      renderStatus({ status: 'running', currentStep: '?' })
-      startPolling()
-    }
-  } catch { showError('Failed to send resume signal.') }
+  } catch { /* best-effort — polling will catch the real state */ }
 }
 
 function cancelRun() {

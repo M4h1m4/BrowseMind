@@ -62,18 +62,80 @@ async function executeStep(
     return { status: 'failed', errorDetails: 'output step blocked: allowWrites is false' }
   }
 
-  if (actionClass === 'destructive') {
+  // ── Destructive action — request human confirmation ───────────────────────
+  const startTime = new Date().toISOString()
+  
+  if (actionClass === 'destructive' && mayEscalate) {
+    let beforeScreenshot: string | undefined
+    try {
+      beforeScreenshot = await captureScreenshot(page, runState.runId, step.stepNumber, 'before-destructive')
+    } catch { /* evidence is best-effort */ }
+
     runState.status   = 'confirmation_required'
     runState.isPaused = true
-    console.log(`[replay] destructive action at step ${step.stepNumber} — pausing for confirmation`)
-    return { status: 'failed', errorDetails: 'destructive action requires confirmation' }
+    runState.interventionRequest = {
+      runId:           runState.runId,
+      goalDescription: artifact.goal,
+      currentStep:     step.stepNumber,
+      whyStuck:        `Destructive action detected: ${step.description}`,
+      screenshotPath:  beforeScreenshot,
+      artifactId:      runState.artifactId
+    }
+
+    console.log(`[replay] destructive action at step ${step.stepNumber} — waiting for confirmation`)
+
+    let humanNotes = ''
+    try {
+      humanNotes = await waitForHandoff(runState.runId)
+    } catch (err) {
+      runState.status   = 'failed'
+      runState.isPaused = false
+      runState.interventionRequest = undefined
+      const observed = err instanceof Error ? err.message : String(err)
+      runState.log.error = {
+        step:     step.stepNumber,
+        expected: 'human confirmation for destructive action',
+        observed,
+        type:     'hard_failure'
+      }
+      console.log(`[replay] destructive action cancelled by human at step ${step.stepNumber}`)
+      return { status: 'failed', errorDetails: 'destructive action cancelled by human' }
+    }
+
+    let afterScreenshot: string | undefined
+    try {
+      afterScreenshot = await captureScreenshot(page, runState.runId, step.stepNumber, 'after-destructive')
+    } catch { /* best-effort */ }
+
+    runState.status   = 'running'
+    runState.isPaused = false
+    runState.interventionRequest = undefined
+
+    runState.log.steps.push({
+      stepNumber:          step.stepNumber,
+      startTime,
+      endTime:             new Date().toISOString(),
+      retryCount:          0,
+      status:              'stuck',
+      elementStrategyUsed: 'primary',
+      sensitive:           step.sensitive,
+      screenshotPath:      step.sensitive ? undefined : beforeScreenshot,
+      afterScreenshotPath: step.sensitive ? undefined : afterScreenshot,
+      humanNotes:          humanNotes || 'Human approved destructive action',
+      errorDetails:        undefined
+    })
+
+    console.log(
+      `[replay] destructive action approved by human — notes: "${humanNotes}" — proceeding with step ${step.stepNumber}`
+    )
+    
+    // Continue with normal execution (fall through to retry loop below)
   }
 
   // ── Retry loop ──────────────────────────────────────────────────────────────
   let succeeded                    = false
   let lastError                    = ''
   let strategyUsed: ElementStrategy = 'primary'
-  const startTime                  = new Date().toISOString()
 
   for (let attempt = 0; attempt <= step.maxRetries; attempt++) {
     try {
@@ -467,11 +529,12 @@ async function executeStep(
 
   if (!succeeded) {
     // ── Stuck vs hard failure ──────────────────────────────────────────────
-    // "Stuck" means we could not find the control at all — a human looking at
-    // the page can usually resolve that, so it is worth pausing for one. A
-    // checkpoint that failed, or a blocked action, is a genuine failure and
-    // escalating would only waste the operator's time.
-    const isStuck = lastError.includes('Could not locate') || lastError.includes('boundingBox')
+    // "Stuck" means the step cannot complete — either the element is missing, or
+    // a checkpoint repeatedly fails (e.g. validation error, unexpected page state).
+    // A human can resolve either: fix the data, dismiss a dialog, or navigate manually.
+    const isStuck = lastError.includes('Could not locate') ||
+      lastError.includes('boundingBox') ||
+      lastError.includes('Checkpoint failed')
 
     if (isStuck && mayEscalate) {
       let beforeScreenshot: string | undefined

@@ -69,6 +69,7 @@
         '</div>' +
         '<div class="flex-gap">' +
         '<a href="appointment-form.html?patientId=' + patientId + '" class="btn btn-primary">📅 Book Appointment</a>' +
+        '<button onclick="deletePatient(\'' + patientId + '\', \'' + patient.name + '\')" class="btn" style="background:#dc2626;color:white;">🗑️ Delete Patient</button>' +
         '<a href="patients.html" class="btn btn-secondary">← Back</a>' +
         '</div>' +
         '</div>';
@@ -155,6 +156,27 @@
       document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
       document.getElementById('tab-' + tabId).classList.add('active');
       btn.classList.add('active');
+    }
+
+    function deletePatient(patientId, patientName) {
+      // No confirm() dialog — BrowseMind handles the confirmation
+      // This function just executes the delete when called
+      fetch('/api/patients/' + patientId, {
+        method: 'DELETE'
+      })
+      .then(function(res) {
+        if (res.ok) {
+          alert('✅ Patient ' + patientName + ' has been deleted successfully.');
+          window.location.href = 'patients.html';
+        } else {
+          return res.json().then(function(data) {
+            alert('❌ Error: ' + (data.error || 'Failed to delete patient'));
+          });
+        }
+      })
+      .catch(function(err) {
+        alert('❌ Network error: ' + err.message);
+      });
     }
   </script>
 </body>
