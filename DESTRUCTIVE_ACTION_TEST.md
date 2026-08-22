@@ -144,12 +144,18 @@ Or just restart the mock sites script.
 
 ### 3. Test with BrowseMind (Capture)
 1. Open http://localhost:3000
-2. Enter goal: `Go to patients, click on patient Margaret Thornton, and click the delete patient button.`
-3. Target App: `http://127.0.0.1:4300`
-4. Click "Start Capture"
-5. **Watch for confirmation modal** — should appear when BrowseMind tries to click "Delete Patient"
-6. Click "Approve — Continue"
-7. Capture completes, artifact saved
+2. **UNCHECK "Auto-replay after capture"** checkbox (important for single-patient test)
+3. Enter goal: `Go to patients, click on patient Margaret Thornton, and click the delete patient button.`
+4. Target App: `http://127.0.0.1:4300`
+5. Click "Start Capture"
+6. **Watch for confirmation modal** — should appear when BrowseMind tries to click "Delete Patient"
+7. Click "Approve — Continue"
+8. Capture completes, artifact saved
+
+**Note:** If "Auto-replay after capture" is checked, BrowseMind will:
+- Capture the delete workflow (asks confirmation)
+- Immediately replay it (asks confirmation again)
+- Try to delete the same patient twice (second one fails because patient is already gone)
 
 ### 4. Test with BrowseMind (Replay)
 1. Take the artifact ID from capture
