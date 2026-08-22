@@ -38,6 +38,7 @@
         <a href="patients.html" class="btn btn-secondary">← Back to Patients</a>
       </div>
 
+      <div id="error-alert" class="alert alert-error" style="display:none;"></div>
       <div id="success-alert" class="alert alert-success" style="display:none;">
         ✅ Patient registered successfully! The patient profile has been created in the system.
       </div>
@@ -356,16 +357,17 @@
       e.preventDefault();
       var firstName = document.getElementById('first-name').value.trim();
       var lastName = document.getElementById('last-name').value.trim();
+      var errorAlert = document.getElementById('error-alert');
       var successAlert = document.getElementById('success-alert');
 
       // ── Client-side SSN validation: exactly 4 digits ─────────────────
       var ssnField = document.getElementById('ssn');
       var ssn = ssnField.value.trim();
       if (!/^\d{4}$/.test(ssn)) {
-        successAlert.className = 'alert alert-error';
-        successAlert.innerHTML = '❌ <strong>SSN must be exactly 4 digits.</strong> You entered "' + (ssn || '(empty)') + '". Please correct the SSN field.';
-        successAlert.style.display = 'flex';
-        successAlert.scrollIntoView({ behavior: 'smooth' });
+        successAlert.style.display = 'none';
+        errorAlert.innerHTML = '❌ <strong>SSN must be exactly 4 digits.</strong> You entered "' + (ssn || '(empty)') + '". Please correct the SSN field.';
+        errorAlert.style.display = 'flex';
+        errorAlert.scrollIntoView({ behavior: 'smooth' });
         ssnField.style.borderColor = '#dc2626';
         ssnField.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.25)';
         ssnField.focus();
@@ -373,6 +375,7 @@
       } else {
         ssnField.style.borderColor = '';
         ssnField.style.boxShadow = '';
+        errorAlert.style.display = 'none';
       }
 
       var payload = {
@@ -400,12 +403,13 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.error) {
-          successAlert.className = 'alert alert-error';
-          successAlert.innerHTML = '❌ ' + data.error;
-          successAlert.style.display = 'flex';
+          errorAlert.innerHTML = '❌ ' + data.error;
+          errorAlert.style.display = 'flex';
+          successAlert.style.display = 'none';
           showToast(null, data.error, true);
           return;
         }
+        errorAlert.style.display = 'none';
         successAlert.className = 'alert alert-success';
         successAlert.innerHTML = '✅ Patient <strong>' + firstName + ' ' + lastName + '</strong> has been registered successfully! ' +
           'Patient ID <strong>' + data.id + '</strong> has been assigned. ' +
@@ -418,9 +422,9 @@
         refreshRegistryStats();
       })
       .catch(function(err) {
-        successAlert.className = 'alert alert-error';
-        successAlert.innerHTML = '❌ Network error: ' + err.message;
-        successAlert.style.display = 'flex';
+        errorAlert.innerHTML = '❌ Network error: ' + err.message;
+        errorAlert.style.display = 'flex';
+        successAlert.style.display = 'none';
         showToast(null, 'Network error: ' + err.message, true);
       });
     }
