@@ -529,11 +529,12 @@ async function executeStep(
 
   if (!succeeded) {
     // ── Stuck vs hard failure ──────────────────────────────────────────────
-    // "Stuck" means we could not find the control at all — a human looking at
-    // the page can usually resolve that, so it is worth pausing for one. A
-    // checkpoint that failed, or a blocked action, is a genuine failure and
-    // escalating would only waste the operator's time.
-    const isStuck = lastError.includes('Could not locate') || lastError.includes('boundingBox')
+    // "Stuck" means the step cannot complete — either the element is missing, or
+    // a checkpoint repeatedly fails (e.g. validation error, unexpected page state).
+    // A human can resolve either: fix the data, dismiss a dialog, or navigate manually.
+    const isStuck = lastError.includes('Could not locate') ||
+      lastError.includes('boundingBox') ||
+      lastError.includes('Checkpoint failed')
 
     if (isStuck && mayEscalate) {
       let beforeScreenshot: string | undefined
