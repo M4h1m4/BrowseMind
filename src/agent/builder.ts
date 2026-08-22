@@ -376,7 +376,29 @@ export class ArtifactBuilder {
       }
     }
 
-    // ── Step 2: Checkpoint hallucination — prune isolated nav steps ─────
+    // ── Step 2: Consecutive mutating clicks with same target ─────────────
+    // When the LLM generates a second click on the same button (typically to
+    // verify the submission succeeded), the earlier click's checkpoint may be
+    // self-referential (describes the button, not the success outcome). Keep
+    // only the last click in the sequence — it's the one with the real
+    // setFinalCheckpoint from discovery's post-submit detection.
+    for (let i = 1; i < this.steps.length; i++) {
+      if (toRemove.has(i - 1)) continue
+      const prev = this.steps[i - 1]
+      const curr = this.steps[i]
+      if (!prev.isMutating || !curr.isMutating) continue
+      if (prev.actionType !== 'click' || curr.actionType !== 'click') continue
+      if (!isSimilar(prev.description, curr.description)) continue
+      // only prune if the earlier click's checkpoint is self-referential
+      const cpText = prev.checkpoint.value.toLowerCase()
+      const descText = normalize(prev.description)
+      if (cpText && descText.includes(cpText)) {
+        toRemove.add(i - 1)
+        console.log(`[builder] pruning step ${prev.stepNumber}: "${prev.description}" — duplicate mutating click (keeping the one with verified checkpoint)`)
+      }
+    }
+
+    // ── Step 3: Checkpoint hallucination — prune isolated nav steps ─────
     // (not already in a consecutive group) where the next step's checkpoint
     // was hallucinated AND the next step is a retry of the same nav action
     for (let i = 0; i < this.steps.length; i++) {
