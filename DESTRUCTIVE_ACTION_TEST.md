@@ -159,50 +159,41 @@ Or just restart the mock sites script.
 
 ## Important Notes
 
-### Browser `confirm()` Dialog
-The patient-detail.html uses native `confirm()` which:
-- In headed browser: shows a blocking dialog
-- In Playwright headless: **auto-accepts by default**
+### Where the Confirmation Appears
 
-For true testing, we'd need to either:
-- Run in headed mode (`headless: false`)
-- Mock the confirm with a custom modal
-- Use Playwright's `page.on('dialog')` handler
+**KEY POINT:** The confirmation modal appears in the **BrowseMind Operator UI** (http://localhost:3000), NOT in the target website.
+
+**Flow:**
+1. User opens BrowseMind UI at http://localhost:3000 in their browser
+2. User submits capture/replay with delete goal
+3. BrowseMind launches headless Playwright browser (automated, invisible)
+4. Headless browser navigates to MediTrack, clicks patient, reaches delete button
+5. BrowseMind detects "Delete Patient" as destructive → **pauses**
+6. **BrowseMind UI (where the user is watching) shows:**
+   ```
+   🛑 Confirmation required at step X
+   BrowseMind detected a potentially destructive action and paused for your approval.
+   
+   [Approve — Continue]  [Cancel Run]
+   ```
+7. User clicks "Approve — Continue" in the **BrowseMind UI**
+8. Signal sent to the running capture/replay process
+9. Headless browser resumes and clicks the delete button
+10. MediTrack deletes the patient
+
+**The target website (MediTrack) should NOT show any confirmation** — that was removed from patient-detail.html.
 
 ### Confirmation is Asked BEFORE the Action
-The destructive confirmation happens **before** BrowseMind clicks the delete button.
-So the flow is:
+The destructive confirmation happens **before** BrowseMind clicks the delete button:
 1. BrowseMind: "I want to click 'Delete Patient'"
 2. BrowseMind: "Wait, that's destructive — ask human"
-3. Human: "Yes, proceed"
-4. BrowseMind: *clicks button*
-5. Browser: *shows confirm() dialog*
-6. (Auto-accept or human confirms again)
-7. DELETE request sent
+3. **Pauses, shows banner in BrowseMind UI**
+4. Human (watching BrowseMind UI): clicks "Approve — Continue"
+5. BrowseMind: *resumes, clicks the delete button*
+6. DELETE request sent to backend
+7. Patient deleted
 
-So there are actually **two confirmations**:
-- BrowseMind's confirmation (our new feature)
-- Browser's confirm() dialog (existing in the HTML)
-
-For a cleaner test, we could remove the browser confirm() from the deletePatient function.
-
-## Alternative Test (No Browser Confirm)
-
-Modify `patient-detail.html` line 166-170 to remove the `confirm()` call:
-
-```javascript
-function deletePatient(patientId, patientName) {
-  // REMOVED: var confirmDelete = confirm(...);
-  // REMOVED: if (!confirmDelete) return;
-  
-  fetch('/api/patients/' + patientId, {
-    method: 'DELETE'
-  })
-  // ... rest
-}
-```
-
-Then only BrowseMind's confirmation fires (cleaner test).
+**Only ONE confirmation** (in BrowseMind UI) — no browser dialogs.
 
 ## Expected Behavior Summary
 

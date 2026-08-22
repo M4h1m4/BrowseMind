@@ -159,14 +159,8 @@
     }
 
     function deletePatient(patientId, patientName) {
-      // Show confirmation alert
-      var confirmDelete = confirm('⚠️ WARNING: You are about to permanently delete patient ' + patientName + ' (ID: ' + patientId + ').\n\nThis action cannot be undone. All medical history and appointments will be lost.\n\nAre you sure you want to proceed?');
-      
-      if (!confirmDelete) {
-        console.log('[meditrack] patient deletion cancelled by user');
-        return;
-      }
-
+      // No confirm() dialog — BrowseMind handles the confirmation
+      // This function just executes the delete when called
       fetch('/api/patients/' + patientId, {
         method: 'DELETE'
       })
