@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Detail — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html" class="active"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <a href="products.html">Products</a>
+        <span class="sep">›</span>
+        <span class="current" id="bc-product-name">Loading…</span>
+      </div>
+
+      <div id="product-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const params = new URL(location.href).searchParams;
+  const productId = params.get('id') || 'PRD001';
+
+  const product = STOCKWISE.products.find(p => p.id === productId);
+  const supplier = product ? STOCKWISE.suppliers.find(s => s.id === product.supplierId) : null;
+  const movements = product ? (STOCKWISE.stockMovements[productId] || []) : [];
+
+  function stockClass(p) {
+    if (p.stockLevel <= p.reorderPoint * 0.5) return 'critical';
+    if (p.stockLevel <= p.reorderPoint) return 'low';
+    return 'ok';
+  }
+
+  function starsHTML(rating) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      html += i <= rating ? '★' : '<span class="empty">★</span>';
+    }
+    return `<span class="stars">${html}</span>`;
+  }
+
+  function movementTypeLabel(type) {
+    const map = {
+      purchase: { label: 'Purchase Receipt', icon: '📥', cls: 'badge-approved' },
+      sale: { label: 'Sale', icon: '📤', cls: 'badge-submitted' },
+      adjustment: { label: 'Adjustment', icon: '🔧', cls: 'badge-draft' },
+      return: { label: 'Return', icon: '↩️', cls: 'badge-low' },
+      damage: { label: 'Damage Write-off', icon: '🗑️', cls: 'badge-critical' }
+    };
+    return map[type] || { label: type, icon: '•', cls: 'badge-draft' };
+  }
+
+  if (!product) {
+    document.getElementById('product-content').innerHTML = `
+      <div class="alert alert-danger">
+        <span class="alert-icon">❌</span>
+        <div class="alert-body"><strong>Product Not Found</strong> No product with ID "${productId}" exists.</div>
+      </div>
+      <a href="products.html" class="btn btn-secondary">← Back to Products</a>`;
+  } else {
+    const cls = stockClass(product);
+    const pct = Math.min(100, Math.round((product.stockLevel / (product.reorderPoint * 2)) * 100));
+    document.getElementById('bc-product-name').textContent = product.name;
+    document.title = `${product.name} — StockWise`;
+
+    const categoryBadgeClass = {
+      'Electronics': 'badge-electronics', 'Office Supplies': 'badge-office',
+      'Furniture': 'badge-furniture', 'Tools': 'badge-tools', 'Consumables': 'badge-consumables'
+    }[product.category] || 'badge-draft';
+
+    const alertHtml = cls !== 'ok' ? `
+      <div class="alert ${cls === 'critical' ? 'alert-danger' : 'alert-warning'}">
+        <span class="alert-icon">${cls === 'critical' ? '🚨' : '⚠️'}</span>
+        <div class="alert-body">
+          <strong>${cls === 'critical' ? 'Critical Stock Level' : 'Low Stock Warning'}</strong>
+          Current stock (${product.stockLevel} ${product.unit}) is ${cls === 'critical' ? 'critically' : ''} below the reorder point of ${product.reorderPoint} ${product.unit}.
+          <a href="new-order.html" style="color:inherit; font-weight:700;">Create a purchase order</a> to replenish.
+        </div>
+      </div>` : '';
+
+    const movementsRows = movements.length === 0
+      ? `<tr><td colspan="5" class="table-empty">No stock movements recorded.</td></tr>`
+      : [...movements].reverse().map(m => {
+          const mt = movementTypeLabel(m.type);
+          const sign = m.qty > 0 ? '+' : '';
+          const qtyColor = m.qty > 0 ? '#16a34a' : '#dc2626';
+          return `<tr>
+            <td>${new Date(m.date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</td>
+            <td><span class="badge ${mt.cls}">${mt.icon} ${mt.label}</span></td>
+            <td style="color:${qtyColor}; font-weight:700;">${sign}${m.qty} ${product.unit}</td>
+            <td class="text-bold">${m.balance} ${product.unit}</td>
+            <td><span class="mono">${m.reference}</span></td>
+          </tr>`;
+        }).join('');
+
+    const totalValue = (product.stockLevel * product.unitPrice).toFixed(2);
+
+    document.getElementById('product-content').innerHTML = `
+      ${alertHtml}
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>${product.name}</h1>
+          <p><span class="mono">${product.sku}</span> &nbsp;|&nbsp; <span class="badge ${categoryBadgeClass}">${product.category}</span></p>
+        </div>
+        <div class="page-header-actions">
+          <a href="new-order.html" class="btn btn-warning">📄 Create Order</a>
+          <a href="products.html" class="btn btn-secondary">← Back to Products</a>
+        </div>
+      </div>
+
+      <div class="two-col" style="margin-bottom:20px;">
+        <!-- Product Info Card -->
+        <div class="card mb-0">
+          <div class="card-header"><h3>Product Information</h3></div>
+          <div class="info-grid">
+            <div class="info-grid-item">
+              <div class="info-label">Product ID</div>
+              <div class="info-value"><span class="mono">${product.id}</span></div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">SKU</div>
+              <div class="info-value"><span class="mono">${product.sku}</span></div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Category</div>
+              <div class="info-value"><span class="badge ${categoryBadgeClass}">${product.category}</span></div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Unit of Measure</div>
+              <div class="info-value">${product.unit}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Unit Price</div>
+              <div class="info-value large text-green">$${product.unitPrice.toFixed(2)}</div>
+            </div>
+            <div class="info-grid-item">
+              <div class="info-label">Reorder Point</div>
+              <div class="info-value">${product.reorderPoint} ${product.unit}</div>
+            </div>
+            <div class="info-grid-item" style="border-right:none; grid-column: 1 / -1;">
+              <div class="info-label">Description</div>
+              <div class="info-value" style="font-size:13px; font-weight:400; color:#374151; line-height:1.5;">${product.description}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock Level & Supplier -->
+        <div>
+          <!-- Stock Level Indicator -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><h3>Current Stock Level</h3></div>
+            <div class="card-body">
+              <div class="stock-indicator-lg">
+                <div class="stock-numbers">
+                  <div>
+                    <div class="stock-current ${cls}">${product.stockLevel}</div>
+                    <div class="stock-unit-label" style="margin-top:4px;">${product.unit}(s) in stock</div>
+                  </div>
+                  <div class="text-right">
+                    <div style="font-size:13px; color:#6b7280;">Stock value</div>
+                    <div style="font-size:20px; font-weight:800; color:#1a3a2a; margin-top:2px;">$${parseFloat(totalValue).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                  </div>
+                </div>
+                <div class="stock-bar-wrap-lg">
+                  <div class="stock-bar-lg bar-${cls}" style="width:${pct}%"></div>
+                </div>
+                <div class="stock-legend">
+                  <span>0</span>
+                  <span>Reorder: ${product.reorderPoint}</span>
+                  <span>Target: ${product.reorderPoint * 2}</span>
+                </div>
+              </div>
+              <div style="margin-top:12px;">
+                <span class="badge ${cls === 'critical' ? 'badge-critical' : cls === 'low' ? 'badge-low' : 'badge-ok'}" style="font-size:12px; padding: 5px 12px;">
+                  ${cls === 'critical' ? '🔴 Critical — Immediate Reorder Required' : cls === 'low' ? '⚠️ Below Reorder Point' : '✓ Stock Level OK'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Supplier Card -->
+          <div class="card mb-0">
+            <div class="card-header"><h3>Supplier Information</h3></div>
+            <div class="card-body" style="padding-bottom:16px;">
+              <div class="supplier-card">
+                <div class="supplier-card-header">
+                  <div>
+                    <h4>${supplier ? supplier.name : 'Unknown Supplier'}</h4>
+                    <div style="margin-top:4px;">${starsHTML(supplier ? supplier.rating : 0)} <span style="font-size:11px; color:#6b7280; margin-left:4px;">(${supplier ? supplier.rating : 0}/5)</span></div>
+                  </div>
+                  ${supplier ? `<a href="supplier-detail.html?id=${supplier.id}" class="btn btn-sm btn-secondary">View Profile</a>` : ''}
+                </div>
+                ${supplier ? `
+                <div class="supplier-detail-row"><span>Contact:</span> ${supplier.contactPerson}</div>
+                <div class="supplier-detail-row"><span>Email:</span> <a href="mailto:${supplier.email}">${supplier.email}</a></div>
+                <div class="supplier-detail-row"><span>Phone:</span> ${supplier.phone}</div>
+                <div class="supplier-detail-row"><span>Terms:</span> ${supplier.paymentTerms}</div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adjust Stock -->
+      <div class="card">
+        <div class="card-header"><h3>🔧 Adjust Stock</h3></div>
+        <div class="card-body">
+          <div class="inline-form">
+            <h3>Enter Stock Adjustment</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Adjustment Type <span class="required">*</span></label>
+                <select class="form-control" id="adj-type">
+                  <option value="purchase">Purchase Receipt</option>
+                  <option value="adjustment">Manual Adjustment</option>
+                  <option value="sale">Sale</option>
+                  <option value="return">Return</option>
+                  <option value="damage">Damage Write-off</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quantity <span class="required">*</span></label>
+                <input type="number" class="form-control" id="adj-qty" placeholder="Enter quantity (use negative for reduction)" min="-9999" max="9999">
+                <div class="form-hint">Use positive for additions, negative for reductions.</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Reference / Notes</label>
+                <input type="text" class="form-control" id="adj-ref" placeholder="e.g. PO-2026-023 or Damaged in transit">
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
+              <button class="btn btn-primary" onclick="submitAdjustment()">Submit Adjustment</button>
+              <button class="btn btn-secondary" onclick="clearAdjForm()">Clear</button>
+              <span id="adj-success" class="text-muted" style="font-size:13px;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Movement History -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📈 Stock Movement History</h3>
+          <span class="text-muted text-small">${movements.length} movement(s) recorded</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Movement Type</th>
+                <th>Qty Change</th>
+                <th>Running Balance</th>
+                <th>Reference</th>
+              </tr>
+            </thead>
+            <tbody>${movementsRows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function submitAdjustment() {
+    const type = document.getElementById('adj-type').value;
+    const qty = parseInt(document.getElementById('adj-qty').value);
+    const ref = document.getElementById('adj-ref').value.trim();
+    const msgEl = document.getElementById('adj-success');
+
+    if (isNaN(qty) || qty === 0) {
+      msgEl.textContent = '⚠️ Please enter a valid non-zero quantity.';
+      msgEl.style.color = '#dc2626';
+      return;
+    }
+
+    msgEl.textContent = `✓ Adjustment recorded: ${qty > 0 ? '+' : ''}${qty} ${product ? product.unit : 'unit'}(s) (${type})${ref ? ' — ' + ref : ''}. New balance reflected on next sync.`;
+    msgEl.style.color = '#16a34a';
+    document.getElementById('adj-qty').value = '';
+    document.getElementById('adj-ref').value = '';
+  }
+
+  function clearAdjForm() {
+    document.getElementById('adj-qty').value = '';
+    document.getElementById('adj-ref').value = '';
+    const msgEl = document.getElementById('adj-success');
+    if (msgEl) msgEl.textContent = '';
+  }
+</script>
+</body>
+</html>

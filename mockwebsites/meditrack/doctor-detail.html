@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doctor Profile — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Doctor Profile</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="main-content">
+      <!-- Rendered by JS -->
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('doctors');
+
+    var params = new URL(location.href).searchParams;
+    var doctorId = params.get('id') || 'D001';
+    var doctor = MEDITRACK.getDoctorById(doctorId);
+    var main = document.getElementById('main-content');
+
+    if (!doctor) {
+      main.innerHTML = '<div class="alert alert-error">Doctor not found: ' + doctorId + '</div>' +
+        '<a href="doctors.html" class="btn btn-secondary">Back to Doctors</a>';
+    } else {
+      document.title = doctor.name + ' — MediTrack';
+      document.getElementById('topbar-title').textContent = doctor.name;
+
+      var initials = MEDITRACK.getInitials(doctor.name);
+      var appts = MEDITRACK.getAppointmentsByDoctor(doctorId);
+      var upcomingAppts = appts.filter(function(a) {
+        return a.status === 'scheduled';
+      }).sort(function(a, b) {
+        var dc = a.date.localeCompare(b.date);
+        return dc !== 0 ? dc : a.time.localeCompare(b.time);
+      });
+      var completedAppts = appts.filter(function(a){ return a.status === 'completed'; });
+
+      // Breadcrumb
+      var bc = '<nav class="breadcrumb">' +
+        '<a href="index.html">Dashboard</a><span class="breadcrumb-sep">›</span>' +
+        '<a href="doctors.html">Doctors</a><span class="breadcrumb-sep">›</span>' +
+        '<span class="breadcrumb-current">' + doctor.name + '</span>' +
+        '</nav>';
+
+      // Profile header
+      var ph = '<div class="profile-header">' +
+        '<div class="profile-avatar" style="background:var(--navy);">' + initials + '</div>' +
+        '<div style="flex:1;">' +
+        '<div class="profile-name">' + doctor.name +
+        ' <span class="badge badge-blue">' + doctor.specialty + '</span>' +
+        '</div>' +
+        '<div class="profile-meta">' +
+        '<span class="profile-id">' + doctor.id + '</span>' +
+        '<span>' + doctor.department + ' Department</span>' +
+        '<span>Floor ' + doctor.floor + '</span>' +
+        '</div>' +
+        '<div style="font-size:12.5px;color:var(--gray-500);margin-top:6px;">' + doctor.bio + '</div>' +
+        '</div>' +
+        '<div class="flex-gap">' +
+        '<a href="appointment-form.html" class="btn btn-primary">📅 Schedule Appointment</a>' +
+        '<a href="doctors.html" class="btn btn-secondary">← Back</a>' +
+        '</div>' +
+        '</div>';
+
+      // Stats row
+      var statsRow = '<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">' +
+        '<div class="stat-card"><div class="stat-card-body"><div class="stat-card-label">Upcoming Appts</div><div class="stat-card-value">' + upcomingAppts.length + '</div></div><div class="stat-card-icon icon-blue">📅</div></div>' +
+        '<div class="stat-card"><div class="stat-card-body"><div class="stat-card-label">Completed</div><div class="stat-card-value">' + completedAppts.length + '</div></div><div class="stat-card-icon icon-green">✅</div></div>' +
+        '<div class="stat-card"><div class="stat-card-body"><div class="stat-card-label">Total Patients</div><div class="stat-card-value">' + [...new Set(appts.map(function(a){ return a.patientId; }))].length + '</div></div><div class="stat-card-icon icon-yellow">👥</div></div>' +
+        '<div class="stat-card"><div class="stat-card-body"><div class="stat-card-label">Department</div><div class="stat-card-value" style="font-size:14px;margin-top:6px;">' + doctor.department + '</div></div><div class="stat-card-icon icon-red">🏢</div></div>' +
+        '</div>';
+
+      // Contact & Schedule card
+      var schedDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      var schedRows = schedDays.map(function(day) {
+        var hours = doctor.schedule[day] || 'Off';
+        var avail = hours !== 'Off';
+        return '<tr>' +
+          '<td style="font-weight:600;">' + day + '</td>' +
+          '<td class="' + (avail ? 'avail-yes' : 'avail-no') + '">' + (avail ? '● Available' : '○ Off') + '</td>' +
+          '<td>' + (avail ? hours : '—') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      var infoAndSchedule = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">' +
+
+        '<div class="card" style="margin-bottom:0;">' +
+        '<div class="card-header"><h2>Contact Information</h2></div>' +
+        '<div class="card-body">' +
+        '<div class="info-grid" style="grid-template-columns:1fr;">' +
+        '<div class="info-item mb-12"><div class="info-label">Phone</div><div class="info-value">' + doctor.phone + '</div></div>' +
+        '<div class="info-item mb-12"><div class="info-label">Email</div><div class="info-value">' + doctor.email + '</div></div>' +
+        '<div class="info-item mb-12"><div class="info-label">Department</div><div class="info-value">' + doctor.department + '</div></div>' +
+        '<div class="info-item mb-12"><div class="info-label">Specialty</div><div class="info-value">' + doctor.specialty + '</div></div>' +
+        '<div class="info-item"><div class="info-label">Office Floor</div><div class="info-value">Floor ' + doctor.floor + '</div></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+
+        '<div class="card" style="margin-bottom:0;">' +
+        '<div class="card-header"><h2>Weekly Schedule</h2></div>' +
+        '<div class="table-wrapper">' +
+        '<table class="schedule-table">' +
+        '<thead><tr><th>Day</th><th>Status</th><th>Hours</th></tr></thead>' +
+        '<tbody>' + schedRows + '</tbody>' +
+        '</table>' +
+        '</div>' +
+        '</div>' +
+
+        '</div>';
+
+      // Upcoming appointments
+      var upcomingTable = '<div class="card" style="margin-bottom:20px;">' +
+        '<div class="card-header"><h2>Upcoming Appointments (' + upcomingAppts.length + ')</h2>' +
+        '<a href="appointment-form.html" class="btn btn-sm btn-primary">+ Schedule</a>' +
+        '</div>' +
+        '<div class="table-wrapper"><table>' +
+        '<thead><tr><th>Appt ID</th><th>Patient</th><th>Date</th><th>Time</th><th>Status</th><th>Notes</th></tr></thead>' +
+        '<tbody>';
+
+      if (upcomingAppts.length === 0) {
+        upcomingTable += '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No upcoming appointments.</td></tr>';
+      } else {
+        upcomingAppts.slice(0, 10).forEach(function(a) {
+          var p = MEDITRACK.getPatientById(a.patientId);
+          upcomingTable += '<tr>' +
+            '<td class="td-mono">' + a.id + '</td>' +
+            '<td><a href="patient-detail.html?id=' + a.patientId + '" style="color:var(--accent);text-decoration:none;font-weight:500;">' +
+              (p ? p.name : a.patientId) + '</a></td>' +
+            '<td style="white-space:nowrap;">' + MEDITRACK.formatDate(a.date) + '</td>' +
+            '<td style="font-weight:600;">' + MEDITRACK.formatTime(a.time) + '</td>' +
+            '<td>' + MEDITRACK.getStatusBadge(a.status) + '</td>' +
+            '<td style="max-width:220px;font-size:12px;color:var(--gray-500);">' + a.notes + '</td>' +
+            '</tr>';
+        });
+      }
+
+      upcomingTable += '</tbody></table></div></div>';
+
+      // Past appointments
+      var pastTable = '<div class="card">' +
+        '<div class="card-header"><h2>Completed Appointments (' + completedAppts.length + ')</h2></div>' +
+        '<div class="table-wrapper"><table>' +
+        '<thead><tr><th>Appt ID</th><th>Patient</th><th>Date</th><th>Time</th><th>Status</th><th>Notes</th></tr></thead>' +
+        '<tbody>';
+
+      if (completedAppts.length === 0) {
+        pastTable += '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">No completed appointments on record.</td></tr>';
+      } else {
+        completedAppts.forEach(function(a) {
+          var p = MEDITRACK.getPatientById(a.patientId);
+          pastTable += '<tr>' +
+            '<td class="td-mono">' + a.id + '</td>' +
+            '<td><a href="patient-detail.html?id=' + a.patientId + '" style="color:var(--accent);text-decoration:none;font-weight:500;">' +
+              (p ? p.name : a.patientId) + '</a></td>' +
+            '<td style="white-space:nowrap;">' + MEDITRACK.formatDate(a.date) + '</td>' +
+            '<td>' + MEDITRACK.formatTime(a.time) + '</td>' +
+            '<td>' + MEDITRACK.getStatusBadge(a.status) + '</td>' +
+            '<td style="max-width:220px;font-size:12px;color:var(--gray-500);">' + a.notes + '</td>' +
+            '</tr>';
+        });
+      }
+
+      pastTable += '</tbody></table></div></div>';
+
+      main.innerHTML = bc + ph + statsRow + infoAndSchedule + upcomingTable + pastTable;
+    }
+  </script>
+</body>
+</html>

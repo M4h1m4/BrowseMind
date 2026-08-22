@@ -15,9 +15,14 @@ jest.mock('playwright', () => ({
           goto:            jest.fn().mockResolvedValue(undefined),
           waitForTimeout:  jest.fn().mockResolvedValue(undefined),
           url:             jest.fn().mockImplementation(() => mockPageUrl),
+          viewportSize:    jest.fn().mockReturnValue({ width: 1280, height: 720 }),
           locator: jest.fn().mockReturnValue({
             first:     jest.fn().mockReturnValue({
-              boundingBox: jest.fn().mockResolvedValue({ x: 50, y: 100, width: 100, height: 40 })
+              boundingBox:            jest.fn().mockResolvedValue({ x: 50, y: 100, width: 100, height: 40 }),
+              count:                  jest.fn().mockResolvedValue(1),
+              scrollIntoViewIfNeeded: jest.fn().mockResolvedValue(undefined),
+              click:                  jest.fn().mockResolvedValue(undefined),
+              fill:                   jest.fn().mockResolvedValue(undefined)
             }),
             isVisible: jest.fn().mockResolvedValue(true)
           }),
@@ -29,7 +34,10 @@ jest.mock('playwright', () => ({
           keyboard: {
             type:  jest.fn().mockResolvedValue(undefined),
             press: jest.fn().mockResolvedValue(undefined)
-          }
+          },
+          evaluate:     jest.fn().mockResolvedValue(null),
+          selectOption: jest.fn().mockResolvedValue(undefined),
+          waitForURL:   jest.fn().mockResolvedValue(undefined)
         })
       }),
       close: jest.fn().mockResolvedValue(undefined)
@@ -74,8 +82,8 @@ function makeStep(overrides = {}) {
 function makeArtifact(overrides: Partial<Artifact> = {}): Artifact {
   return {
     artifactId: 'artifact-001', tenantId: 'tenant-001', version: 1,
-    goal: 'Test', targetApp: 'https://example.com', createdAt: new Date().toISOString(),
-    allowWrites: true, inputSchema: {}, outputSchema: {},
+    goal: 'Test', targetApp: 'https://example.com', allowedDomains: ['https://example.com'],
+    createdAt: new Date().toISOString(), allowWrites: true, inputSchema: {}, outputSchema: {},
     steps: [makeStep()],
     ...overrides
   }

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appointments — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Appointments</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Appointments</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Appointment Management</h1>
+          <p>View, filter, and manage all clinic appointments.</p>
+        </div>
+        <a href="appointment-form.html" class="btn btn-primary">+ Book New Appointment</a>
+      </div>
+
+      <!-- Summary strip -->
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;" id="appt-stats"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 id="appt-count-label">All Appointments</h2>
+          <div class="filter-bar" style="margin-bottom:0;">
+            <select id="status-filter">
+              <option value="">All Statuses</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select id="doctor-filter">
+              <option value="">All Doctors</option>
+            </select>
+            <input type="date" id="date-filter" />
+            <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Appt ID</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="appt-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="appt-pagination">
+          <span class="pagination-info" id="appt-pagination-info"></span>
+          <span class="page-btn active" id="apg1" onclick="goPage(1)">1</span>
+          <span class="page-btn" id="apg2" onclick="goPage(2)">2</span>
+          <span class="page-btn" id="apg3" onclick="goPage(3)">3</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('appointments');
+
+    var PAGE_SIZE = 12;
+    var currentPage = 1;
+    var filtered = [];
+
+    // Populate doctor filter
+    var docFilter = document.getElementById('doctor-filter');
+    MEDITRACK.doctors.forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      docFilter.appendChild(opt);
+    });
+
+    // Stats
+    var statsEl = document.getElementById('appt-stats');
+    var total = MEDITRACK.appointments.length;
+    var scheduled = MEDITRACK.appointments.filter(function(a){ return a.status === 'scheduled'; }).length;
+    var completed = MEDITRACK.appointments.filter(function(a){ return a.status === 'completed'; }).length;
+    var cancelled = MEDITRACK.appointments.filter(function(a){ return a.status === 'cancelled'; }).length;
+
+    [
+      { label: 'Scheduled', value: scheduled, icon: '📅', cls: 'icon-blue' },
+      { label: 'Completed', value: completed, icon: '✅', cls: 'icon-green' },
+      { label: 'Cancelled', value: cancelled, icon: '❌', cls: 'icon-red' }
+    ].forEach(function(s) {
+      statsEl.innerHTML += '<div class="stat-card">' +
+        '<div class="stat-card-body">' +
+        '<div class="stat-card-label">' + s.label + '</div>' +
+        '<div class="stat-card-value">' + s.value + '</div>' +
+        '<div class="stat-card-sub">of ' + total + ' total</div>' +
+        '</div>' +
+        '<div class="stat-card-icon ' + s.cls + '">' + s.icon + '</div>' +
+        '</div>';
+    });
+
+    function applyFilters() {
+      var status = document.getElementById('status-filter').value;
+      var doctor = document.getElementById('doctor-filter').value;
+      var date = document.getElementById('date-filter').value;
+
+      filtered = MEDITRACK.appointments.filter(function(a) {
+        return (!status || a.status === status) &&
+               (!doctor || a.doctorId === doctor) &&
+               (!date || a.date === date);
+      });
+
+      // Sort by date desc, then time
+      filtered.sort(function(a, b) {
+        var dc = b.date.localeCompare(a.date);
+        return dc !== 0 ? dc : a.time.localeCompare(b.time);
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById('appt-tbody');
+      tbody.innerHTML = '';
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var end = Math.min(start + PAGE_SIZE, filtered.length);
+      var page = filtered.slice(start, end);
+
+      if (page.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:28px;">No appointments match your filters.</td></tr>';
+      } else {
+        page.forEach(function(a) {
+          var patient = MEDITRACK.getPatientById(a.patientId);
+          var doctor = MEDITRACK.getDoctorById(a.doctorId);
+          tbody.innerHTML += '<tr>' +
+            '<td class="td-mono">' + a.id + '</td>' +
+            '<td><a href="patient-detail.html?id=' + a.patientId + '" style="color:var(--accent);text-decoration:none;font-weight:500;">' +
+              (patient ? patient.name : a.patientId) + '</a>' +
+              '<br><span class="td-mono" style="font-size:11px;">' + a.patientId + '</span></td>' +
+            '<td style="font-size:13px;">' + (doctor ? doctor.name : a.doctorId) +
+              '<br><span style="font-size:11px;color:var(--gray-400);">' + (doctor ? doctor.specialty : '') + '</span></td>' +
+            '<td style="white-space:nowrap;">' + MEDITRACK.formatDate(a.date) + '</td>' +
+            '<td style="font-weight:500;">' + MEDITRACK.formatTime(a.time) + '</td>' +
+            '<td>' + MEDITRACK.getStatusBadge(a.status) + '</td>' +
+            '<td style="max-width:200px;font-size:12px;color:var(--gray-500);">' + a.notes + '</td>' +
+            '<td><a href="patient-detail.html?id=' + a.patientId + '" class="btn btn-sm btn-secondary">Patient</a></td>' +
+            '</tr>';
+        });
+      }
+
+      var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      document.getElementById('appt-pagination-info').textContent =
+        'Showing ' + (filtered.length === 0 ? 0 : start + 1) + '–' + end + ' of ' + filtered.length;
+      document.getElementById('appt-count-label').textContent =
+        'Appointments (' + filtered.length + ')';
+
+      for (var i = 1; i <= 3; i++) {
+        var btn = document.getElementById('apg' + i);
+        if (btn) {
+          btn.style.display = i > totalPages ? 'none' : '';
+          btn.className = 'page-btn' + (currentPage === i ? ' active' : '');
+        }
+      }
+    }
+
+    function goPage(n) {
+      currentPage = n;
+      renderTable();
+    }
+
+    function clearFilters() {
+      document.getElementById('status-filter').value = '';
+      document.getElementById('doctor-filter').value = '';
+      document.getElementById('date-filter').value = '';
+      applyFilters();
+    }
+
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('doctor-filter').addEventListener('change', applyFilters);
+    document.getElementById('date-filter').addEventListener('change', applyFilters);
+
+    applyFilters(); // initial render
+  </script>
+</body>
+</html>

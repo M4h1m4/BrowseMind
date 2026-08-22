@@ -13,10 +13,10 @@ afterEach(() => {
 })
 
 describe('GET /api/v1/artifacts', () => {
-  it('returns 400 when tenantId is missing', async () => {
+  it('lists the default tenant when the caller does not supply one', async () => {
     const res = await request(app).get('/api/v1/artifacts')
-    expect(res.status).toBe(400)
-    expect(res.body.error).toBeDefined()
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.artifacts)).toBe(true)
   })
 
   it('returns empty array when no artifacts exist for tenant', async () => {
@@ -41,9 +41,11 @@ describe('GET /api/v1/artifacts', () => {
 })
 
 describe('GET /api/v1/artifacts/:artifactId', () => {
-  it('returns 400 when tenantId is missing', async () => {
+  it('falls back to the default tenant when the caller does not supply one', async () => {
+    saveArtifact(sampleArtifact)
     const res = await request(app).get(`/api/v1/artifacts/${sampleArtifact.artifactId}`)
-    expect(res.status).toBe(400)
+    // The fixture is filed under its own tenant, so the default cannot see it.
+    expect(res.status).toBe(404)
   })
 
   it('returns the artifact when it exists', async () => {
@@ -72,9 +74,19 @@ describe('GET /api/v1/artifacts/:artifactId', () => {
 describe('DELETE /api/v1/artifacts/:artifactId', () => {
   it('deletes an existing artifact and returns deleted: true', async () => {
     saveArtifact(sampleArtifact)
-    const res = await request(app).delete(`/api/v1/artifacts/${sampleArtifact.artifactId}`)
+    const res = await request(app)
+      .delete(`/api/v1/artifacts/${sampleArtifact.artifactId}?tenantId=${sampleArtifact.tenantId}`)
     expect(res.status).toBe(200)
     expect(res.body.deleted).toBe(true)
+  })
+
+  it('will not delete an artifact belonging to another tenant', async () => {
+    // The delete matches on tenant as well as id, so an id alone is not enough
+    // to remove someone else's automation.
+    saveArtifact(sampleArtifact)
+    const res = await request(app)
+      .delete(`/api/v1/artifacts/${sampleArtifact.artifactId}?tenantId=someone-else`)
+    expect(res.status).toBe(404)
   })
 
   it('returns 404 when artifact does not exist', async () => {
@@ -84,7 +96,8 @@ describe('DELETE /api/v1/artifacts/:artifactId', () => {
 
   it('artifact is no longer retrievable after deletion', async () => {
     saveArtifact(sampleArtifact)
-    await request(app).delete(`/api/v1/artifacts/${sampleArtifact.artifactId}`)
+    await request(app)
+      .delete(`/api/v1/artifacts/${sampleArtifact.artifactId}?tenantId=${sampleArtifact.tenantId}`)
     const res = await request(app)
       .get(`/api/v1/artifacts/${sampleArtifact.artifactId}?tenantId=${sampleArtifact.tenantId}`)
     expect(res.status).toBe(404)

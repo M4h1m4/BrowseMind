@@ -14,7 +14,9 @@ function makeMockPage(): Page {
       press: jest.fn().mockResolvedValue(undefined)
     },
     goto:           jest.fn().mockResolvedValue(undefined),
-    waitForTimeout: jest.fn().mockResolvedValue(undefined)
+    waitForTimeout: jest.fn().mockResolvedValue(undefined),
+    evaluate:       jest.fn().mockResolvedValue(null),
+    selectOption:   jest.fn().mockResolvedValue(undefined)
   } as unknown as Page
 }
 
@@ -37,11 +39,11 @@ describe('executeAction', () => {
     expect(page.mouse.click).toHaveBeenCalledWith(150, 250)
   })
 
-  it('click — uses fallback coordinates (640, 360) when coordinates not provided', async () => {
+  it('click — skips click when coordinates not provided (no hardcoded fallback)', async () => {
     const page = makeMockPage()
     const action = { ...baseAction, action: 'click' as const, coordinates: undefined }
     await executeAction(page, action)
-    expect(page.mouse.click).toHaveBeenCalledWith(640, 360)
+    expect(page.mouse.click).not.toHaveBeenCalled()
   })
 
   it('input — clicks target then types value', async () => {

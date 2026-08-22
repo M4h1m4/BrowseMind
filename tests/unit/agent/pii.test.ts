@@ -58,17 +58,25 @@ describe('ArtifactBuilder — sensitive field detection', () => {
     expect(artifact.steps[0].sensitive).toBe(true)
   })
 
-  it('masks value as "****" for sensitive steps', () => {
+  it('templatizes value for sensitive steps and stores default in inputSchema', () => {
     builder.addStep(makeAction({ value: 'supersecret' }), makeElementData('Password'), 1)
     const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
-    expect(artifact.steps[0].value).toBe('****')
+    // Value is now a template variable, not masked
+    expect(artifact.steps[0].value).toMatch(/^\{\{.+\}\}$/)
+    // The real value is stored as a default in inputSchema
+    const varName = artifact.steps[0].value!.replace(/^\{\{|\}\}$/g, '')
+    expect(artifact.inputSchema[varName].default).toBe('supersecret')
+    expect(artifact.inputSchema[varName].sensitive).toBe(true)
   })
 
-  it('preserves value for non-sensitive steps', () => {
+  it('templatizes value for non-sensitive steps', () => {
     builder.addStep(makeAction({ value: 'John Doe' }), makeElementData('', 'Employee Name'), 1)
     const artifact = builder.build('goal', 'https://example.com', 'tenant-001')
-    expect(artifact.steps[0].value).toBe('John Doe')
+    // All input values are now templatized
+    expect(artifact.steps[0].value).toMatch(/^\{\{.+\}\}$/)
     expect(artifact.steps[0].sensitive).toBe(false)
+    const varName = artifact.steps[0].value!.replace(/^\{\{|\}\}$/g, '')
+    expect(artifact.inputSchema[varName].default).toBe('John Doe')
   })
 
   it('marks step as sensitive for SSN field', () => {

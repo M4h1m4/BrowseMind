@@ -8,35 +8,54 @@ import { cancelResume, resetSignals } from '../../../src/session/resumeSignal'
 // jest.mock is hoisted — define everything inside the factory to avoid
 // "Cannot access before initialization" errors with outer variables.
 
-jest.mock('playwright', () => ({
-  chromium: {
-    launch: jest.fn().mockResolvedValue({
-      newContext: jest.fn().mockResolvedValue({
-        newPage: jest.fn().mockResolvedValue({
-          setViewportSize: jest.fn().mockResolvedValue(undefined),
-          goto:            jest.fn().mockResolvedValue(undefined),
-          screenshot:      jest.fn().mockResolvedValue(Buffer.from('fake-png')),
-          waitForTimeout:  jest.fn().mockResolvedValue(undefined),
-          mouse: {
-            click: jest.fn().mockResolvedValue(undefined),
-            move:  jest.fn().mockResolvedValue(undefined),
-            wheel: jest.fn().mockResolvedValue(undefined)
-          },
-          keyboard: {
-            type:  jest.fn().mockResolvedValue(undefined),
-            press: jest.fn().mockResolvedValue(undefined)
-          },
-          evaluate: jest.fn().mockResolvedValue({
-            ariaLabel:   'Test Label',
-            placeholder: '',
-            textContent: 'Test'
-          })
-        })
-      }),
-      close: jest.fn().mockResolvedValue(undefined)
-    })
+jest.mock('playwright', () => {
+  const mockLocator = {
+    first:      jest.fn().mockReturnThis(),
+    count:      jest.fn().mockResolvedValue(0),
+    isVisible:  jest.fn().mockResolvedValue(false),
+    boundingBox: jest.fn().mockResolvedValue(null),
+    textContent: jest.fn().mockResolvedValue(''),
   }
-}))
+  return {
+    chromium: {
+      launch: jest.fn().mockResolvedValue({
+        newContext: jest.fn().mockResolvedValue({
+          newPage: jest.fn().mockResolvedValue({
+            setViewportSize: jest.fn().mockResolvedValue(undefined),
+            goto:            jest.fn().mockResolvedValue(undefined),
+            screenshot:      jest.fn().mockResolvedValue(Buffer.from('fake-png')),
+            waitForTimeout:  jest.fn().mockResolvedValue(undefined),
+            url:             jest.fn().mockReturnValue('https://example.com/home'),
+            locator:         jest.fn().mockReturnValue(mockLocator),
+            mouse: {
+              click: jest.fn().mockResolvedValue(undefined),
+              move:  jest.fn().mockResolvedValue(undefined),
+              wheel: jest.fn().mockResolvedValue(undefined)
+            },
+            keyboard: {
+              type:  jest.fn().mockResolvedValue(undefined),
+              press: jest.fn().mockResolvedValue(undefined)
+            },
+            evaluate: jest.fn().mockImplementation(() => {
+              // Returns a value that works for all evaluate calls:
+              // - isInteractiveAt sees truthy → accepts coords
+              // - extractElementData sees an object with ariaLabel
+              // - findSelectorAtCoords sees a truthy string (for selector checks)
+              // The mock returns the attrs object; extractElementData reads .ariaLabel etc.
+              // isInteractiveAt returns a boolean but truthy object is fine.
+              return Promise.resolve({
+                ariaLabel:   'Test Label',
+                placeholder: '',
+                textContent: 'Test'
+              })
+            })
+          })
+        }),
+        close: jest.fn().mockResolvedValue(undefined)
+      })
+    }
+  }
+})
 
 // ─── Mock OpenAI SDK — prevents async credential loading after test teardown
 
@@ -95,6 +114,20 @@ const clickAction = {
   updatedSummary:    'Clicked test button'
 }
 
+const outputAction = {
+  checkpointForPreviousStep: null,
+  action:            'output' as const,
+  targetDescription: 'Write output file',
+  value:             null,
+  reasoning:         'Save results',
+  requiresLogin:     false,
+  goalComplete:      true,
+  updatedSummary:    'Done',
+  outputFormat:      'json' as const,
+  outputPath:        'out/test.json',
+  outputFields:      [{ header: 'Test', variable: '{{test}}' }]
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -108,18 +141,16 @@ afterEach(() => {
 })
 
 describe('runDiscovery', () => {
-  it('sets status to success when LLM signals goalComplete', async () => {
+  it('sets status to success when LLM signals goalComplete via output step', async () => {
     mockCallLLM
       .mockResolvedValueOnce({ ...clickAction })
       .mockResolvedValueOnce({
-        ...clickAction,
-        goalComplete:              true,
+        ...outputAction,
         checkpointForPreviousStep: { type: 'url-contains' as const, value: '/home' },
-        updatedSummary:            'Done'
       })
 
     const state = makeRunState()
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(state.status).toBe('success')
     expect(state.artifactId).toBeDefined()
@@ -129,14 +160,12 @@ describe('runDiscovery', () => {
     mockCallLLM
       .mockResolvedValueOnce({ ...clickAction })
       .mockResolvedValueOnce({
-        ...clickAction,
-        goalComplete:              true,
-        checkpointForPreviousStep: { type: 'url-contains' as const, value: '/done' },
-        updatedSummary:            'Done'
+        ...outputAction,
+        checkpointForPreviousStep: { type: 'url-contains' as const, value: '/home' },
       })
 
     const state = makeRunState()
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     const artifacts = findArtifactsByTenant('tenant-001')
     expect(artifacts).toHaveLength(1)
@@ -156,7 +185,7 @@ describe('runDiscovery', () => {
       cancelResume(state.runId)
     }, 20)
 
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(statusWhilePaused).toBe('login_required')
     expect(state.status).toBe('failed')
@@ -166,7 +195,7 @@ describe('runDiscovery', () => {
     mockCallLLM.mockRejectedValueOnce(new Error('LLM API unavailable'))
 
     const state = makeRunState()
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(state.status).toBe('failed')
     expect(state.log.error?.observed).toContain('LLM API unavailable')
@@ -181,7 +210,7 @@ describe('runDiscovery', () => {
     })
 
     const state = makeRunState()
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(writeRunLog).toHaveBeenCalledWith(
       expect.objectContaining({ runId: 'run-001' })
@@ -200,7 +229,7 @@ describe('runDiscovery', () => {
       })
 
     const state = makeRunState()
-    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', mockClient)
+    await runDiscovery(state, 'Test goal', 'https://example.com', 'tenant-001', [], mockClient)
 
     expect(state.currentStep).toBe(3)
   })

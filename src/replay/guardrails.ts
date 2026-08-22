@@ -18,25 +18,53 @@ export function classifyAction(actionType: ActionType, targetDescription: string
     case 'wait':
     case 'scroll':
     case 'navigate':
+    case 'extract':
+    case 'loop':
       return 'read-only'
     case 'click':
     case 'input':
     case 'keydown':
       return 'write'
+    case 'output':
+      return 'write'
   }
 }
 
 /**
- * Returns true if the given URL is on the same hostname as targetApp.
- * Relative URLs (no hostname) are considered safe — same domain by definition.
+ * Returns true if the given URL is on one of the allowedDomains hostnames
+ * (or a subdomain of one). Relative URLs are treated as same-domain (safe).
+ *
+ * allowedDomains is an array of full URLs or bare hostnames, e.g.:
+ *   ['https://app.example.com', 'https://auth.example.com']
  */
-export function isAllowedDomain(url: string, targetApp: string): boolean {
+export function isAllowedDomain(url: string, allowedDomains: string[]): boolean {
+  let currentHostname: string
+  let currentHost: string   // hostname + port — distinguishes localhost:3001 from localhost:3002
   try {
-    const allowedHost = new URL(targetApp).hostname
-    const currentHost = new URL(url).hostname
-    return currentHost === allowedHost || currentHost.endsWith(`.${allowedHost}`)
+    const parsed  = new URL(url)
+    currentHostname = parsed.hostname
+    currentHost     = parsed.host
   } catch {
-    // Relative URL or unparseable — treat as same-domain
+    // Relative URL — treat as same-domain
     return true
   }
+
+  return allowedDomains.some(domain => {
+    try {
+      // domain may be a full URL (http://example.com) or a bare hostname (example.com)
+      const parsed      = domain.includes('://')
+        ? new URL(domain)
+        : new URL(`http://${domain}`)
+      const allowedHost     = parsed.host      // with port
+      const allowedHostname = parsed.hostname  // without port, used for subdomain check
+
+      // Exact host match (respects port)
+      if (currentHost === allowedHost) return true
+      // Subdomain of allowed hostname (no-port check — subdomains share the parent's port rules)
+      if (currentHostname.endsWith(`.${allowedHostname}`)) return true
+      return false
+    } catch {
+      return false
+    }
+  })
 }

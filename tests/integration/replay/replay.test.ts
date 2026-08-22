@@ -13,9 +13,14 @@ jest.mock('playwright', () => ({
           goto:            jest.fn().mockResolvedValue(undefined),
           waitForTimeout:  jest.fn().mockResolvedValue(undefined),
           url:             jest.fn().mockReturnValue('https://example.com/dashboard'),
+          viewportSize:    jest.fn().mockReturnValue({ width: 1280, height: 720 }),
           locator: jest.fn().mockReturnValue({
             first:     jest.fn().mockReturnValue({
-              boundingBox: jest.fn().mockResolvedValue({ x: 50, y: 100, width: 100, height: 40 })
+              boundingBox:            jest.fn().mockResolvedValue({ x: 50, y: 100, width: 100, height: 40 }),
+              count:                  jest.fn().mockResolvedValue(1),
+              scrollIntoViewIfNeeded: jest.fn().mockResolvedValue(undefined),
+              click:                  jest.fn().mockResolvedValue(undefined),
+              fill:                   jest.fn().mockResolvedValue(undefined)
             }),
             isVisible: jest.fn().mockResolvedValue(true)
           }),
@@ -27,7 +32,10 @@ jest.mock('playwright', () => ({
           keyboard: {
             type:  jest.fn().mockResolvedValue(undefined),
             press: jest.fn().mockResolvedValue(undefined)
-          }
+          },
+          evaluate: jest.fn().mockResolvedValue(null),
+          selectOption: jest.fn().mockResolvedValue(undefined),
+          waitForURL:   jest.fn().mockResolvedValue(undefined)
         })
       }),
       close: jest.fn().mockResolvedValue(undefined)
@@ -72,9 +80,10 @@ function makeArtifact(overrides: Partial<Artifact> = {}): Artifact {
     tenantId:     'tenant-001',
     version:      1,
     goal:         'Test goal',
-    targetApp:    'https://example.com',
-    createdAt:    new Date().toISOString(),
-    allowWrites:  true,
+    targetApp:      'https://example.com',
+    allowedDomains: ['https://example.com'],
+    createdAt:      new Date().toISOString(),
+    allowWrites:    true,
     inputSchema:  {},
     outputSchema: {},
     steps: [
@@ -189,7 +198,10 @@ describe('runReplay', () => {
     const state = makeRunState()
     await runReplay(state, artifact, { employeeName: 'John Doe' })
 
-    expect(mockPage.keyboard.type).toHaveBeenCalledWith('John Doe', expect.any(Object))
+    // Text entry goes through the locator, which auto-scrolls and throws if the
+    // field is not editable — mouse.click + keyboard.type could miss silently.
+    const field = mockPage.locator().first()
+    expect(field.fill).toHaveBeenCalledWith('John Doe', expect.any(Object))
   })
 
   it('skips checkpoint verification when checkpoint value is empty placeholder', async () => {

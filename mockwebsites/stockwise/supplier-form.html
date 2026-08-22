@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Supplier — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html" class="active"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <a href="suppliers.html">Suppliers</a>
+        <span class="sep">›</span>
+        <span class="current">Add New Supplier</span>
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Add New Supplier</h1>
+          <p>Enter vendor details to add them to the procurement system.</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="suppliers.html" class="btn btn-secondary">← Cancel</a>
+        </div>
+      </div>
+
+      <div id="success-banner" class="alert alert-success hidden">
+        <span class="alert-icon">✓</span>
+        <div class="alert-body">
+          <strong>Supplier Added Successfully</strong>
+          The new supplier has been registered in the system. <a href="suppliers.html">Return to Suppliers</a>.
+        </div>
+      </div>
+
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <!-- Company Info -->
+          <div class="card">
+            <div class="card-header"><h3>Company Information</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Company Name <span class="required">*</span></label>
+                <input type="text" class="form-control" id="f-company" placeholder="e.g. Acme Office Supplies Inc.">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Contact Person <span class="required">*</span></label>
+                  <input type="text" class="form-control" id="f-contact" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone Number <span class="required">*</span></label>
+                  <input type="tel" class="form-control" id="f-phone" placeholder="555-000-0000">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address <span class="required">*</span></label>
+                <input type="email" class="form-control" id="f-email" placeholder="procurement@supplier.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Business Address <span class="required">*</span></label>
+                <textarea class="form-control" id="f-address" rows="2" placeholder="Street address, City, State, ZIP"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contract Terms -->
+          <div class="card">
+            <div class="card-header"><h3>Contract &amp; Terms</h3></div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Payment Terms <span class="required">*</span></label>
+                  <select class="form-control" id="f-terms">
+                    <option value="">— Select Terms —</option>
+                    <option value="Net15">Net 15</option>
+                    <option value="Net30">Net 30</option>
+                    <option value="Net45">Net 45</option>
+                    <option value="Net60">Net 60</option>
+                    <option value="Net90">Net 90</option>
+                    <option value="COD">COD (Cash on Delivery)</option>
+                    <option value="Prepaid">Prepaid</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Initial Rating <span class="required">*</span></label>
+                  <select class="form-control" id="f-rating">
+                    <option value="">— Select Rating —</option>
+                    <option value="5">★★★★★ (5 — Excellent)</option>
+                    <option value="4">★★★★☆ (4 — Good)</option>
+                    <option value="3">★★★☆☆ (3 — Average)</option>
+                    <option value="2">★★☆☆☆ (2 — Below Average)</option>
+                    <option value="1">★☆☆☆☆ (1 — Poor)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes / Special Instructions</label>
+                <textarea class="form-control" id="f-notes" rows="3" placeholder="Any special handling, communication preferences, or procurement rules…"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Sidebar -->
+        <div>
+          <div class="card">
+            <div class="card-header"><h3>Preview</h3></div>
+            <div class="card-body">
+              <div class="supplier-card">
+                <div class="supplier-card-header">
+                  <h4 id="prev-company">Company Name</h4>
+                </div>
+                <div class="supplier-detail-row"><span>Contact:</span> <span id="prev-contact">—</span></div>
+                <div class="supplier-detail-row"><span>Email:</span> <span id="prev-email">—</span></div>
+                <div class="supplier-detail-row"><span>Phone:</span> <span id="prev-phone">—</span></div>
+                <div class="supplier-detail-row"><span>Address:</span> <span id="prev-address">—</span></div>
+                <div class="supplier-detail-row"><span>Terms:</span> <span id="prev-terms">—</span></div>
+                <div class="supplier-detail-row"><span>Rating:</span> <span id="prev-rating">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Next Steps</h3></div>
+            <div class="card-body" style="font-size:13px; color:#374151; line-height:1.7;">
+              <p>After adding this supplier, you can:</p>
+              <ul style="padding-left:18px; margin-top:8px;">
+                <li>Create a purchase order with them</li>
+                <li>Assign existing products to this supplier</li>
+                <li>Track their order history and performance</li>
+              </ul>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="submitSupplier()">Save Supplier</button>
+                <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+  const fields = ['f-company','f-contact','f-phone','f-email','f-address','f-terms','f-rating'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+    if (el) el.addEventListener('change', updatePreview);
+  });
+
+  function starsHTML(r) {
+    let h = '';
+    for (let i = 1; i <= 5; i++) h += i <= parseInt(r) ? '★' : '☆';
+    return h;
+  }
+
+  function updatePreview() {
+    document.getElementById('prev-company').textContent = document.getElementById('f-company').value || 'Company Name';
+    document.getElementById('prev-contact').textContent = document.getElementById('f-contact').value || '—';
+    document.getElementById('prev-email').textContent = document.getElementById('f-email').value || '—';
+    document.getElementById('prev-phone').textContent = document.getElementById('f-phone').value || '—';
+    document.getElementById('prev-address').textContent = document.getElementById('f-address').value || '—';
+    document.getElementById('prev-terms').textContent = document.getElementById('f-terms').value || '—';
+    const r = document.getElementById('f-rating').value;
+    document.getElementById('prev-rating').innerHTML = r ? starsHTML(r) + ` (${r}/5)` : '—';
+  }
+
+  function submitSupplier() {
+    const company = document.getElementById('f-company').value.trim();
+    const contact = document.getElementById('f-contact').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const terms = document.getElementById('f-terms').value;
+    const rating = document.getElementById('f-rating').value;
+
+    if (!company || !contact || !email || !phone || !terms || !rating) {
+      alert('Please fill in all required fields before saving.');
+      return;
+    }
+
+    document.getElementById('success-banner').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function clearForm() {
+    fields.forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('f-notes').value = '';
+    updatePreview();
+  }
+</script>
+</body>
+</html>

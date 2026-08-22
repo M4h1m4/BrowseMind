@@ -1,6 +1,6 @@
 // ─── Action & Status Enums ────────────────────────────────────────────────────
 
-export type ActionType = 'click' | 'input' | 'navigate' | 'wait' | 'scroll' | 'keydown'
+export type ActionType = 'click' | 'input' | 'navigate' | 'wait' | 'scroll' | 'keydown' | 'extract' | 'loop' | 'output'
 
 export type RunStatus =
   | 'running'
@@ -42,6 +42,11 @@ export interface RecoverableCondition {
   action:  'dismiss' | 're-login' | 'retry'
 }
 
+export interface OutputField {
+  header:   string   // CSV column name / JSON key
+  variable: string   // e.g. "{{patientName}}"
+}
+
 export interface Step {
   stepNumber:            number
   actionType:            ActionType
@@ -54,7 +59,19 @@ export interface Step {
   checkpoint:            Checkpoint
   knownOutcomes:         KnownOutcome[]
   recoverableConditions: RecoverableCondition[]
+  cssSelector?:          string
+  variableName?:         string
+  attribute?:            string
+  isMutating?:           boolean        // true = modifies data (submit, delete, save); skipped during capture, executed during replay
+  loopSelector?:         string
+  innerSteps?:           Step[]
+  outputFormat?:         'json' | 'csv'
+  outputPath?:           string
+  outputFields?:         OutputField[]
 }
+
+/** Replay-time variables discovered during capture, with their captured defaults. */
+export type InputSchema = Record<string, { type: string; default?: string; sensitive?: boolean }>
 
 export interface Artifact {
   artifactId:     string
@@ -63,9 +80,10 @@ export interface Artifact {
   version:        number
   goal:           string
   targetApp:      string
+  allowedDomains?: string[]  // all domains the workflow may visit; defaults to [targetApp]
   createdAt:      string
   allowWrites:    boolean
-  inputSchema:    Record<string, { type: string }>
+  inputSchema:    InputSchema
   outputSchema:   Record<string, { type: string; sensitive: boolean }>
   steps:          Step[]
 }
@@ -91,6 +109,7 @@ export interface RunStepLog {
   afterScreenshotPath?: string        // screenshot after human handoff
   humanNotes?:          string        // notes from human after escalation
   errorDetails?:        string        // redacted when sensitive: true
+  pageStateAfter?:      string        // captured after mutating steps — visible text on the page post-action
 }
 
 export interface RunLog {
@@ -119,6 +138,15 @@ export interface LLMAction {
   requiresLogin:             boolean
   goalComplete:              boolean
   updatedSummary:            string
+  isMutating?:               boolean                  // true if this action modifies data (form submit, delete, save) — skipped during capture dry run
+  cssSelector?:              string
+  variableName?:             string
+  attribute?:                string
+  loopSelector?:             string
+  innerSteps?:               LLMAction[]
+  outputFormat?:             'json' | 'csv'
+  outputPath?:               string
+  outputFields?:             OutputField[]
 }
 
 // ─── Runtime State ────────────────────────────────────────────────────────────
@@ -143,14 +171,23 @@ export interface RunState {
   interventionRequest?: InterventionRequest
   startedAt:            string
   log:                  RunLog
+  /** Run that continues this one — the next data record from the goal. */
+  chainedRunId?:        string
+  /** Which record from the goal this run is processing, e.g. "Second patient". */
+  sampleLabel?:         string
+  /** Records from the goal still queued behind this run. */
+  pendingSamples?:      number
 }
 
 // ─── API Request / Response Types ─────────────────────────────────────────────
 
 export interface CaptureRunRequest {
-  goal:      string
-  targetApp: string
-  tenantId:  string
+  goal:           string
+  targetApp:      string
+  tenantId:       string
+  allowedDomains?: string[]  // extra domains the workflow may visit (targetApp always included)
+  /** Replay the artifact with captured defaults when the goal holds only one record. */
+  autoReplay?:    boolean
 }
 
 export interface ReplayRunRequest {
@@ -167,7 +204,11 @@ export interface RunStatusResponse {
   runId:                string
   status:               RunStatus
   currentStep:          number
+  artifactId?:          string
   outputs?:             Record<string, unknown>
   error?:               RunError
   interventionRequest?: InterventionRequest
+  chainedRunId?:        string
+  sampleLabel?:         string
+  pendingSamples?:      number
 }

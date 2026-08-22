@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory &amp; Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html" class="active"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <nav class="breadcrumb"><a href="index.html">Dashboard</a> › Reports</nav>
+          <h1>Reports &amp; Analytics</h1>
+          <p class="page-subtitle">Inventory valuation, order history, and supplier performance — as of August 2026</p>
+        </div>
+        <div class="page-header-right">
+          <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+        </div>
+      </div>
+
+      <!-- ── Section 1: Stock Valuation ─────────────────────────────────── -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2 class="card-title">📦 Stock Valuation by Category</h2>
+          <span class="badge badge-info" id="total-value-badge">Loading…</span>
+        </div>
+        <table class="data-table" id="valuation-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Products</th>
+              <th>Total Units</th>
+              <th>Stock Value</th>
+              <th>% of Total</th>
+              <th>Value Bar</th>
+            </tr>
+          </thead>
+          <tbody id="valuation-body"></tbody>
+          <tfoot id="valuation-foot"></tfoot>
+        </table>
+      </div>
+
+      <!-- ── Section 2: Order History ───────────────────────────────────── -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2 class="card-title">📄 Purchase Order Summary</h2>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Orders Placed</th>
+              <th>Approved</th>
+              <th>Received</th>
+              <th>Cancelled</th>
+              <th>Total Value</th>
+            </tr>
+          </thead>
+          <tbody id="order-history-body"></tbody>
+        </table>
+      </div>
+
+      <!-- ── Section 3: Supplier Performance ───────────────────────────── -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h2 class="card-title">🏭 Supplier Performance</h2>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th>Rating</th>
+              <th>Orders Placed</th>
+              <th>Received</th>
+              <th>Cancelled</th>
+              <th>Total Spend</th>
+              <th>Avg Order Value</th>
+            </tr>
+          </thead>
+          <tbody id="supplier-perf-body"></tbody>
+        </table>
+      </div>
+
+      <!-- ── Section 4: Top Moving Products ────────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🔥 Top Ordered Products</h2>
+          <span style="font-size:0.82rem;color:#666;">By total units across all purchase orders</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Units Ordered</th>
+              <th>Order Count</th>
+              <th>Total Value</th>
+              <th>Activity</th>
+            </tr>
+          </thead>
+          <tbody id="top-products-body"></tbody>
+        </table>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+const fmt = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const stars = r => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r))
+
+// ── Section 1: Stock Valuation by Category ───────────────────────────────────
+;(function() {
+  const categories = {}
+  STOCKWISE.products.forEach(p => {
+    if (!categories[p.category]) categories[p.category] = { count: 0, units: 0, value: 0 }
+    categories[p.category].count++
+    categories[p.category].units += p.stockLevel
+    categories[p.category].value += p.stockLevel * p.unitPrice
+  })
+
+  const totalValue = Object.values(categories).reduce((s, c) => s + c.value, 0)
+  document.getElementById('total-value-badge').textContent = 'Total: ' + fmt(totalValue)
+
+  const tbody = document.getElementById('valuation-body')
+  const tfoot = document.getElementById('valuation-foot')
+  let totalUnits = 0, totalCount = 0
+
+  Object.entries(categories).sort((a, b) => b[1].value - a[1].value).forEach(([cat, d]) => {
+    const pct = totalValue > 0 ? ((d.value / totalValue) * 100).toFixed(1) : 0
+    totalUnits += d.units
+    totalCount += d.count
+    const barColor = d.value / totalValue > 0.3 ? '#16a34a' : d.value / totalValue > 0.15 ? '#2563eb' : '#94a3b8'
+    tbody.innerHTML += `<tr>
+      <td><strong>${cat}</strong></td>
+      <td>${d.count}</td>
+      <td>${d.units.toLocaleString()}</td>
+      <td><strong>${fmt(d.value)}</strong></td>
+      <td>${pct}%</td>
+      <td><div style="background:#e5e7eb;border-radius:4px;height:10px;width:120px;">
+            <div style="background:${barColor};border-radius:4px;height:10px;width:${pct}%;"></div>
+          </div></td>
+    </tr>`
+  })
+
+  tfoot.innerHTML = `<tr style="background:#f8fafc;font-weight:700;">
+    <td>TOTAL</td><td>${totalCount}</td><td>${totalUnits.toLocaleString()}</td>
+    <td>${fmt(totalValue)}</td><td>100%</td><td></td>
+  </tr>`
+})()
+
+// ── Section 2: Order History by Month ────────────────────────────────────────
+;(function() {
+  const months = {}
+  STOCKWISE.purchaseOrders.forEach(o => {
+    const m = o.orderDate.slice(0, 7) // YYYY-MM
+    if (!months[m]) months[m] = { total: 0, approved: 0, received: 0, cancelled: 0, value: 0 }
+    months[m].total++
+    if (o.status === 'approved')  months[m].approved++
+    if (o.status === 'received')  months[m].received++
+    if (o.status === 'cancelled') months[m].cancelled++
+    months[m].value += o.totalAmount
+  })
+
+  const tbody = document.getElementById('order-history-body')
+  const monthNames = { '01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec' }
+
+  Object.entries(months).sort().forEach(([ym, d]) => {
+    const [yr, mo] = ym.split('-')
+    tbody.innerHTML += `<tr>
+      <td><strong>${monthNames[mo]} ${yr}</strong></td>
+      <td>${d.total}</td>
+      <td>${d.approved > 0 ? `<span class="badge badge-success">${d.approved}</span>` : '—'}</td>
+      <td>${d.received > 0 ? `<span class="badge badge-info">${d.received}</span>` : '—'}</td>
+      <td>${d.cancelled > 0 ? `<span class="badge badge-danger">${d.cancelled}</span>` : '—'}</td>
+      <td>${fmt(d.value)}</td>
+    </tr>`
+  })
+})()
+
+// ── Section 3: Supplier Performance ──────────────────────────────────────────
+;(function() {
+  const perf = {}
+  STOCKWISE.purchaseOrders.forEach(o => {
+    if (!perf[o.supplierId]) perf[o.supplierId] = { total: 0, received: 0, cancelled: 0, spend: 0 }
+    perf[o.supplierId].total++
+    if (o.status === 'received')  perf[o.supplierId].received++
+    if (o.status === 'cancelled') perf[o.supplierId].cancelled++
+    perf[o.supplierId].spend += o.totalAmount
+  })
+
+  const tbody = document.getElementById('supplier-perf-body')
+  Object.entries(perf).sort((a, b) => b[1].spend - a[1].spend).forEach(([sid, d]) => {
+    const sup = STOCKWISE.suppliers.find(s => s.id === sid)
+    if (!sup) return
+    const avg = d.total > 0 ? d.spend / d.total : 0
+    tbody.innerHTML += `<tr>
+      <td><a href="supplier-detail.html?id=${sid}"><strong>${sup.name}</strong></a></td>
+      <td style="color:#f59e0b;">${stars(sup.rating)} (${sup.rating})</td>
+      <td>${d.total}</td>
+      <td>${d.received > 0 ? `<span class="badge badge-success">${d.received}</span>` : '—'}</td>
+      <td>${d.cancelled > 0 ? `<span class="badge badge-danger">${d.cancelled}</span>` : '—'}</td>
+      <td><strong>${fmt(d.spend)}</strong></td>
+      <td>${fmt(avg)}</td>
+    </tr>`
+  })
+})()
+
+// ── Section 4: Top Moving Products ───────────────────────────────────────────
+;(function() {
+  const productStats = {}
+  STOCKWISE.purchaseOrders.forEach(o => {
+    if (!o.items) return
+    o.items.forEach(item => {
+      if (!productStats[item.productId]) productStats[item.productId] = { units: 0, orders: 0, value: 0 }
+      productStats[item.productId].units  += item.qty
+      productStats[item.productId].orders += 1
+      productStats[item.productId].value  += item.qty * item.unitPrice
+    })
+  })
+
+  const maxUnits = Math.max(...Object.values(productStats).map(s => s.units), 1)
+  const tbody = document.getElementById('top-products-body')
+  let rank = 1
+
+  Object.entries(productStats)
+    .sort((a, b) => b[1].units - a[1].units)
+    .slice(0, 10)
+    .forEach(([pid, d]) => {
+      const prod = STOCKWISE.products.find(p => p.id === pid)
+      if (!prod) return
+      const barPct = ((d.units / maxUnits) * 100).toFixed(0)
+      tbody.innerHTML += `<tr>
+        <td><strong>#${rank++}</strong></td>
+        <td style="font-family:monospace;font-size:0.8rem;">${prod.sku}</td>
+        <td><a href="product-detail.html?id=${pid}">${prod.name}</a></td>
+        <td><span class="badge badge-info">${prod.category}</span></td>
+        <td><strong>${d.units.toLocaleString()}</strong></td>
+        <td>${d.orders}</td>
+        <td>${fmt(d.value)}</td>
+        <td><div style="background:#e5e7eb;border-radius:4px;height:10px;width:120px;">
+              <div style="background:#16a34a;border-radius:4px;height:10px;width:${barPct}%;"></div>
+            </div></td>
+      </tr>`
+    })
+})()
+</script>
+</body>
+</html>

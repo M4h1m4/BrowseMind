@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">MediTrack — Clinic Management System</span>
+      <div class="topbar-right">
+        <span style="font-size:12px;color:var(--gray-500);" id="topbar-date"></span>
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies <span style="color:var(--gray-400);">(Admin)</span></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- Stat Cards -->
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <!-- Today's Schedule -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Today's Schedule</h2>
+            <a href="appointments.html" class="btn btn-sm btn-secondary">View All</a>
+          </div>
+          <div class="table-wrapper">
+            <table id="today-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Patient</th>
+                  <th>Doctor</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="today-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Patients -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Recent Patients</h2>
+            <a href="patients.html" class="btn btn-sm btn-secondary">All Patients</a>
+          </div>
+          <div class="table-wrapper">
+            <table id="recent-patients-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Age</th>
+                  <th>Conditions</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="recent-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appointment Summary -->
+      <div class="card mt-16">
+        <div class="card-header">
+          <h2>Appointment Overview — August 2026</h2>
+          <a href="reports.html" class="btn btn-sm btn-secondary">Full Reports</a>
+        </div>
+        <div class="table-wrapper">
+          <table id="appt-overview-table">
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th>Scheduled</th>
+                <th>Completed</th>
+                <th>Cancelled</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="appt-overview-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    // Sidebar
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('dashboard');
+
+    // Topbar date
+    var now = new Date();
+    document.getElementById('topbar-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // ── Stat Cards ──────────────────────────────────────────
+    var todayStr = now.toISOString().slice(0, 10);
+    var todayAppts = MEDITRACK.getAppointmentsByDate(todayStr).filter(function(a){ return a.status === 'scheduled'; });
+    // If no appointments today, get next available day's count
+    if (todayAppts.length === 0) {
+      var futureAppts = MEDITRACK.appointments.filter(function(a){ return a.date >= todayStr && a.status === 'scheduled'; });
+      futureAppts.sort(function(a,b){ return a.date.localeCompare(b.date); });
+      if (futureAppts.length > 0) {
+        var nextDate = futureAppts[0].date;
+        todayAppts = MEDITRACK.getAppointmentsByDate(nextDate).filter(function(a){ return a.status === 'scheduled'; });
+      }
+    }
+
+    var statsData = [
+      { label: 'Total Patients', value: MEDITRACK.patients.length, sub: 'Registered in system', icon: '👥', iconClass: 'icon-blue' },
+      { label: "Today's Appointments", value: todayAppts.length, sub: 'Scheduled for today', icon: '📅', iconClass: 'icon-green' },
+      { label: 'Active Doctors', value: MEDITRACK.doctors.length, sub: 'On staff', icon: '👨‍⚕️', iconClass: 'icon-yellow' },
+      { label: 'Departments', value: MEDITRACK.departments.length, sub: 'Clinical departments', icon: '🏢', iconClass: 'icon-red' }
+    ];
+
+    var statGrid = document.getElementById('stat-grid');
+    statsData.forEach(function(s) {
+      statGrid.innerHTML += '<div class="stat-card">' +
+        '<div class="stat-card-body">' +
+        '<div class="stat-card-label">' + s.label + '</div>' +
+        '<div class="stat-card-value">' + s.value + '</div>' +
+        '<div class="stat-card-sub">' + s.sub + '</div>' +
+        '</div>' +
+        '<div class="stat-card-icon ' + s.iconClass + '">' + s.icon + '</div>' +
+        '</div>';
+    });
+
+    // ── Today's Schedule Table ──────────────────────────────
+    var scheduledAppts = MEDITRACK.getTodayAppts();
+    scheduledAppts.sort(function(a,b){ return a.time.localeCompare(b.time); });
+
+    var todayTbody = document.getElementById('today-tbody');
+    if (scheduledAppts.length === 0) {
+      todayTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No appointments scheduled.</td></tr>';
+    } else {
+      scheduledAppts.forEach(function(a) {
+        var patient = MEDITRACK.getPatientById(a.patientId);
+        var doctor = MEDITRACK.getDoctorById(a.doctorId);
+        todayTbody.innerHTML += '<tr>' +
+          '<td style="font-weight:600;">' + MEDITRACK.formatTime(a.time) + '</td>' +
+          '<td><a href="patient-detail.html?id=' + a.patientId + '" style="color:var(--accent);text-decoration:none;">' + (patient ? patient.name : a.patientId) + '</a></td>' +
+          '<td>' + (doctor ? doctor.name : a.doctorId) + '</td>' +
+          '<td>' + MEDITRACK.getStatusBadge(a.status) + '</td>' +
+          '</tr>';
+      });
+    }
+
+    // ── Recent Patients Table ───────────────────────────────
+    var recentPatients = MEDITRACK.patients.slice(-5).reverse();
+    var recentTbody = document.getElementById('recent-tbody');
+    recentPatients.forEach(function(p) {
+      recentTbody.innerHTML += '<tr>' +
+        '<td class="td-mono">' + p.id + '</td>' +
+        '<td><a href="patient-detail.html?id=' + p.id + '" style="color:var(--accent);text-decoration:none;font-weight:500;">' + p.name + '</a></td>' +
+        '<td>' + MEDITRACK.calculateAge(p.dob) + '</td>' +
+        '<td>' + (p.conditions.slice(0,2).join(', ') + (p.conditions.length > 2 ? '...' : '')) + '</td>' +
+        '<td><a href="patient-detail.html?id=' + p.id + '" class="btn btn-sm btn-secondary">View</a></td>' +
+        '</tr>';
+    });
+
+    // ── Appointment Overview by Week ────────────────────────
+    var weeks = [
+      { label: 'Week 1 (Aug 1–7)', start: '2026-08-01', end: '2026-08-07' },
+      { label: 'Week 2 (Aug 8–14)', start: '2026-08-08', end: '2026-08-14' },
+      { label: 'Week 3 (Aug 15–21)', start: '2026-08-15', end: '2026-08-21' },
+      { label: 'Week 4 (Aug 22–31)', start: '2026-08-22', end: '2026-08-31' }
+    ];
+
+    var overviewTbody = document.getElementById('appt-overview-tbody');
+    weeks.forEach(function(w) {
+      var weekAppts = MEDITRACK.appointments.filter(function(a) {
+        return a.date >= w.start && a.date <= w.end;
+      });
+      var scheduled = weekAppts.filter(function(a){ return a.status === 'scheduled'; }).length;
+      var completed = weekAppts.filter(function(a){ return a.status === 'completed'; }).length;
+      var cancelled = weekAppts.filter(function(a){ return a.status === 'cancelled'; }).length;
+      overviewTbody.innerHTML += '<tr>' +
+        '<td style="font-weight:500;">' + w.label + '</td>' +
+        '<td>' + (scheduled > 0 ? '<span class="badge badge-blue">' + scheduled + '</span>' : '<span class="text-muted">0</span>') + '</td>' +
+        '<td>' + (completed > 0 ? '<span class="badge badge-green">' + completed + '</span>' : '<span class="text-muted">0</span>') + '</td>' +
+        '<td>' + (cancelled > 0 ? '<span class="badge badge-red">' + cancelled + '</span>' : '<span class="text-muted">0</span>') + '</td>' +
+        '<td style="font-weight:600;">' + weekAppts.length + '</td>' +
+        '</tr>';
+    });
+  </script>
+</body>
+</html>

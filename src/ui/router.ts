@@ -1,16 +1,17 @@
 import fs from 'fs'
 import path from 'path'
 import { Router } from 'express'
-import express from 'express'
 
 export const uiRouter = Router()
 
-// Serve evidence/ directory so screenshots and run logs are browser-accessible
-// fallthrough: false sends a proper 404 instead of passing to the JSON catch-all
-uiRouter.use(
-  '/evidence',
-  express.static(path.join(process.cwd(), 'evidence'), { fallthrough: false })
-)
+// The evidence directory is deliberately NOT mounted here.
+//
+// It holds run logs and step screenshots — the goal text, every value typed into
+// every field, and images of the filled form. Served as a static directory it was
+// readable by anyone who could reach the port, with no authentication and no
+// check that the caller owned the run. Evidence is now reached only through
+// /api/v1/runs/:runId/… , which is behind the API key and verifies the run's
+// tenant before returning anything.
 
 // Serve the operator UI HTML
 uiRouter.get('/', (_req, res) => {

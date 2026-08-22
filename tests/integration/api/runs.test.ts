@@ -85,14 +85,14 @@ describe('GET /api/v1/runs/:runId/log', () => {
     }
     fs.writeFileSync(path.join(EVIDENCE_DIR, `${testRunId}.json`), JSON.stringify(fakeLog))
 
-    const res = await request(app).get(`/api/v1/runs/${testRunId}/log`)
+    const res = await request(app).get(`/api/v1/runs/${testRunId}/log?tenantId=tenant-001`)
     expect(res.status).toBe(200)
     expect(res.body.log.runId).toBe(testRunId)
     expect(res.body.log.status).toBe('success')
   })
 
   it('returns 404 when log file does not exist yet', async () => {
-    const res = await request(app).get(`/api/v1/runs/${testRunId}/log`)
+    const res = await request(app).get(`/api/v1/runs/${testRunId}/log?tenantId=tenant-001`)
     expect(res.status).toBe(404)
     expect(res.body.error).toMatch(/not yet available/)
   })
@@ -130,5 +130,40 @@ describe('POST /api/v1/runs/:runId/takeover', () => {
     const res = await request(app).post(`/api/v1/runs/${runId}/takeover`).send({})
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/not paused/)
+  })
+})
+
+/**
+ * Evidence — run logs and screenshots — holds the goal text, every value typed
+ * into every field, and images of the filled form. It is reached only through
+ * these endpoints, never as a static directory, so the path cannot be walked.
+ */
+describe('evidence is served only through the API', () => {
+  let runId: string
+
+  beforeEach(async () => {
+    runId = await createCaptureRun()
+  })
+
+  it('lists screenshots for a known run', async () => {
+    const res = await request(app).get(`/api/v1/runs/${runId}/screenshots`)
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.screenshots)).toBe(true)
+  })
+
+  it('404s for a run it does not know', async () => {
+    const res = await request(app).get('/api/v1/runs/not-a-run/screenshots')
+    expect(res.status).toBe(404)
+  })
+
+  it('refuses a traversal attempt in the screenshot name', async () => {
+    const res = await request(app)
+      .get(`/api/v1/runs/${runId}/screenshots/${encodeURIComponent('../../../db/artifacts.db')}`)
+    expect(res.status).toBe(400)
+  })
+
+  it('no longer serves the evidence directory statically', async () => {
+    const res = await request(app).get('/evidence/runs/anything.json')
+    expect(res.status).toBe(404)
   })
 })

@@ -30,9 +30,10 @@ export const sampleArtifact: Artifact = {
   tenantId:    'tenant-001',
   version:     1,
   goal:        'Search for employee and return their ID',
-  targetApp:   'https://opensource-demo.orangehrmlive.com',
-  createdAt:   '2026-08-16T10:00:00.000Z',
-  allowWrites: false,
+  targetApp:      'https://opensource-demo.orangehrmlive.com',
+  allowedDomains: ['https://opensource-demo.orangehrmlive.com'],
+  createdAt:      '2026-08-16T10:00:00.000Z',
+  allowWrites:    false,
   inputSchema: {
     employeeName: { type: 'string' }
   },

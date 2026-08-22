@@ -36,9 +36,9 @@ describe('captureAndStoreAuthState', () => {
     mockCookies.mockResolvedValue(fakeCookies)
     mockEvaluate.mockResolvedValue({ token: 'jwt-xyz' })
 
-    await captureAndStoreAuthState(mockContext, mockPage, 'https://example.com')
+    await captureAndStoreAuthState(mockContext, mockPage, 'https://example.com', 'tenant-001')
 
-    const stored = getAuthState('example.com')
+    const stored = getAuthState('tenant-001', 'example.com')
     expect(stored).toBeDefined()
     expect(stored?.cookies).toEqual(fakeCookies)
     expect(stored?.localStorage).toEqual({ token: 'jwt-xyz' })
@@ -49,9 +49,9 @@ describe('captureAndStoreAuthState', () => {
     mockCookies.mockResolvedValue([])
     mockEvaluate.mockResolvedValue({})
 
-    await captureAndStoreAuthState(mockContext, mockPage, 'https://api.example.com/data')
+    await captureAndStoreAuthState(mockContext, mockPage, 'https://api.example.com/data', 'tenant-001')
 
-    expect(getAuthState('api.example.com')).toBeDefined()
-    expect(getAuthState('example.com')).toBeUndefined()
+    expect(getAuthState('tenant-001', 'api.example.com')).toBeDefined()
+    expect(getAuthState('tenant-001', 'example.com')).toBeUndefined()
   })
 })

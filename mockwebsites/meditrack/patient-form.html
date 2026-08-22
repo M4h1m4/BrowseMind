@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add New Patient — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Add New Patient</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <a href="patients.html">Patients</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Add New Patient</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Register New Patient</h1>
+          <p>Complete the form below to add a new patient to the MediTrack registry.</p>
+        </div>
+        <a href="patients.html" class="btn btn-secondary">← Back to Patients</a>
+      </div>
+
+      <div id="success-alert" class="alert alert-success" style="display:none;">
+        ✅ Patient registered successfully! The patient profile has been created in the system.
+      </div>
+
+      <!-- Fixed to the viewport so it is visible wherever the page is scrolled.
+           The inline alert above sits at the top of a 1600px form, which is off
+           screen at the moment of submission. -->
+      <div id="registration-toast" role="status" aria-live="polite"
+           style="display:none;position:fixed;top:20px;right:20px;z-index:9999;max-width:380px;
+                  background:#0f9d58;color:#fff;padding:16px 20px;border-radius:10px;
+                  box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;line-height:1.5;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:20px;line-height:1;">✅</span>
+          <div>
+            <div style="font-weight:700;margin-bottom:2px;" id="toast-title">Patient registered</div>
+            <div id="toast-body" style="opacity:.95;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+
+        <div>
+          <form id="patient-form" onsubmit="submitPatient(event)">
+
+            <!-- Personal Information -->
+            <div class="card mb-16">
+              <div class="card-header"><h2>Personal Information</h2></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="first-name">First Name *</label>
+                    <input type="text" id="first-name" name="firstName" placeholder="e.g. Margaret" required  aria-label="First Name"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="last-name">Last Name *</label>
+                    <input type="text" id="last-name" name="lastName" placeholder="e.g. Thornton" required  aria-label="Last Name"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="dob">Date of Birth *</label>
+                    <input type="date" id="dob" name="dob" required  aria-label="Date of Birth"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="gender">Gender *</label>
+                    <select id="gender" name="gender" required aria-label="Gender">
+                      <option value="">— Select —</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="blood-type">Blood Type</label>
+                    <select id="blood-type" name="bloodType" aria-label="Blood Type">
+                      <option value="">— Unknown —</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="ssn">SSN (last 4) *</label>
+                    <input type="text" id="ssn" name="ssn" placeholder="e.g. 4821" maxlength="4" required  aria-label="SSN last 4"/>
+                    <span class="form-hint">Last 4 digits only for identification purposes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="card mb-16">
+              <div class="card-header"><h2>Contact Information</h2></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" placeholder="(617) 555-0000" required  aria-label="Phone Number"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="patient@email.com"  aria-label="Email Address"/>
+                  </div>
+                  <div class="form-group full-width">
+                    <label for="address">Home Address *</label>
+                    <input type="text" id="address" name="address" placeholder="14 Birchwood Drive, Boston, MA 02108" required  aria-label="Home Address"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="emergency-name">Emergency Contact Name *</label>
+                    <input type="text" id="emergency-name" name="emergencyName" placeholder="John Doe" required  aria-label="Emergency Contact Name"/>
+                  </div>
+                  <div class="form-group">
+                    <label for="emergency-phone">Emergency Contact Phone *</label>
+                    <input type="tel" id="emergency-phone" name="emergencyPhone" placeholder="(617) 555-0001" required  aria-label="Emergency Contact Phone"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Medical Information -->
+            <div class="card mb-16">
+              <div class="card-header"><h2>Medical Information</h2></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="primary-doctor">Primary Care Physician</label>
+                    <select id="primary-doctor" name="primaryDoctor" aria-label="Primary Care Physician">
+                      <option value="">— Assign Later —</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="referral">Referred By</label>
+                    <input type="text" id="referral" name="referral" placeholder="e.g. Self-referral, Dr. Smith"  aria-label="Referred By"/>
+                  </div>
+                  <div class="form-group full-width">
+                    <label for="conditions">Active Conditions / Diagnoses</label>
+                    <input type="text" id="conditions" name="conditions" placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma (comma-separated)"  aria-label="Active Conditions"/>
+                    <span class="form-hint">Enter multiple conditions separated by commas</span>
+                  </div>
+                  <div class="form-group full-width">
+                    <label for="allergies">Known Allergies</label>
+                    <input type="text" id="allergies" name="allergies" placeholder="e.g. Penicillin, Sulfa drugs, Latex (comma-separated)"  aria-label="Known Allergies"/>
+                    <span class="form-hint">Include drug allergies, food allergies, and environmental allergens</span>
+                  </div>
+                  <div class="form-group full-width">
+                    <label for="current-meds">Current Medications</label>
+                    <textarea id="current-meds" name="currentMeds" rows="3" placeholder="e.g. Lisinopril 10mg daily, Metformin 500mg BID, Atorvastatin 40mg nightly" aria-label="Current Medications"></textarea>
+                  </div>
+                  <div class="form-group full-width">
+                    <label for="medical-notes">Additional Medical Notes</label>
+                    <textarea id="medical-notes" name="medicalNotes" rows="3" placeholder="Family history, surgical history, lifestyle factors, etc." aria-label="Additional Medical Notes"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Insurance Information -->
+            <div class="card mb-16">
+              <div class="card-header"><h2>Insurance Information</h2></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="insurance">Insurance Provider *</label>
+                    <select id="insurance" name="insurance" required aria-label="Insurance Provider">
+                      <option value="">— Select Provider —</option>
+                      <option value="BlueCross BlueShield">BlueCross BlueShield</option>
+                      <option value="Aetna">Aetna</option>
+                      <option value="Cigna">Cigna</option>
+                      <option value="United Healthcare">United Healthcare</option>
+                      <option value="Harvard Pilgrim">Harvard Pilgrim</option>
+                      <option value="Tufts Health Plan">Tufts Health Plan</option>
+                      <option value="Medicare">Medicare</option>
+                      <option value="Medicaid">Medicaid</option>
+                      <option value="Self-Pay">Self-Pay / Uninsured</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="insurance-id">Insurance Member ID</label>
+                    <input type="text" id="insurance-id" name="insuranceId" placeholder="e.g. BCB-00123456" />
+                  </div>
+                  <div class="form-group">
+                    <label for="group-number">Group Number</label>
+                    <input type="text" id="group-number" name="groupNumber" placeholder="e.g. 78234" />
+                  </div>
+                  <div class="form-group">
+                    <label for="copay">Copay Amount</label>
+                    <input type="text" id="copay" name="copay" placeholder="e.g. $25.00" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" aria-label="Register Patient">✓ Register Patient</button>
+              <a href="patients.html" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+          <div class="card mb-16">
+            <div class="card-header"><h2>Patient ID Preview</h2></div>
+            <div class="card-body">
+              <div style="text-align:center;padding:12px 0;">
+                <div id="next-patient-id" style="font-size:28px;font-weight:700;color:var(--accent);font-family:monospace;">—</div>
+                <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Next available patient ID</div>
+              </div>
+              <hr style="border:none;border-top:1px solid var(--gray-200);margin:12px 0;" />
+              <div style="font-size:12.5px;color:var(--gray-600);">
+                <div style="margin-bottom:6px;"><strong>Current Registry:</strong> <span id="registry-count">—</span> patients</div>
+                <div style="margin-bottom:6px;"><strong>System:</strong> MediTrack v2.4.1</div>
+                <div><strong>Facility:</strong> Boston Medical Group</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-16">
+            <div class="card-header"><h2>Required Fields</h2></div>
+            <div class="card-body">
+              <ul style="padding-left:16px;font-size:13px;line-height:2;color:var(--gray-600);">
+                <li>First &amp; Last Name</li>
+                <li>Date of Birth</li>
+                <li>Gender</li>
+                <li>SSN (last 4)</li>
+                <li>Phone Number</li>
+                <li>Home Address</li>
+                <li>Emergency Contact</li>
+                <li>Insurance Provider</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2>Data Privacy Notice</h2></div>
+            <div class="card-body">
+              <p style="font-size:12.5px;color:var(--gray-500);line-height:1.6;">
+                All patient data is protected under HIPAA regulations. Access is restricted to authorized clinical staff only. Data is encrypted at rest and in transit.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('patients');
+
+    // Populate doctor dropdown
+    var doctorSelect = document.getElementById('primary-doctor');
+    MEDITRACK.doctors.forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name + ' (' + d.specialty + ')';
+      doctorSelect.appendChild(opt);
+    });
+
+    var toastTimer = null;
+
+    /**
+     * Show a corner toast. Fixed to the viewport, so it is visible no matter where
+     * the long form is scrolled — the inline alert alone is off screen at submit time.
+     */
+    function showToast(patientId, message, isError) {
+      var toast = document.getElementById('registration-toast');
+      var title = document.getElementById('toast-title');
+      var body  = document.getElementById('toast-body');
+
+      if (isError) {
+        toast.style.background = '#d93025';
+        title.textContent = 'Registration failed';
+        body.textContent = message;
+      } else {
+        toast.style.background = '#0f9d58';
+        title.textContent = 'Patient ' + patientId + ' registered';
+        body.textContent = message + ' was added to the registry.';
+      }
+
+      toast.style.display = 'block';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toast.style.display = 'none'; }, 8000);
+    }
+
+    /** Pull the registry size and next ID from the database. */
+    function refreshRegistryStats() {
+      fetch('/api/stats')
+        .then(function (res) { return res.json(); })
+        .then(function (stats) {
+          document.getElementById('next-patient-id').textContent = stats.nextPatientId;
+          document.getElementById('registry-count').textContent  = stats.patientCount;
+        })
+        .catch(function () { /* leave the placeholder dashes */ });
+    }
+
+    /**
+     * Tint a field once it holds a value, so an automated run visibly fills the
+     * form field by field rather than just ending up complete.
+     */
+    function markFilled(el) {
+      if (el.value && String(el.value).trim() !== '') {
+        el.style.background = '#e8f5e9';
+        el.style.borderColor = '#0f9d58';
+      } else {
+        el.style.background = '';
+        el.style.borderColor = '';
+      }
+    }
+
+    function clearFilledHighlights() {
+      var fields = document.querySelectorAll('#patient-form input, #patient-form select, #patient-form textarea');
+      for (var i = 0; i < fields.length; i++) {
+        fields[i].style.background = '';
+        fields[i].style.borderColor = '';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      refreshRegistryStats();
+      var fields = document.querySelectorAll('#patient-form input, #patient-form select, #patient-form textarea');
+      for (var i = 0; i < fields.length; i++) {
+        fields[i].addEventListener('input',  function (e) { markFilled(e.target); });
+        fields[i].addEventListener('change', function (e) { markFilled(e.target); });
+      }
+    });
+
+    function submitPatient(e) {
+      e.preventDefault();
+      var firstName = document.getElementById('first-name').value.trim();
+      var lastName = document.getElementById('last-name').value.trim();
+      var successAlert = document.getElementById('success-alert');
+
+      var payload = {
+        firstName: firstName,
+        lastName: lastName,
+        dob: document.getElementById('dob').value,
+        gender: document.getElementById('gender').value,
+        bloodType: document.getElementById('blood-type').value,
+        ssn: document.getElementById('ssn').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        address: document.getElementById('address').value,
+        conditions: document.getElementById('conditions').value,
+        allergies: document.getElementById('allergies').value,
+        insurance: document.getElementById('insurance').value,
+        emergencyContact: (document.getElementById('emergency-name') ? document.getElementById('emergency-name').value : '') +
+          ' ' + (document.getElementById('emergency-phone') ? document.getElementById('emergency-phone').value : '')
+      };
+
+      fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.error) {
+          successAlert.className = 'alert alert-error';
+          successAlert.innerHTML = '❌ ' + data.error;
+          successAlert.style.display = 'flex';
+          showToast(null, data.error, true);
+          return;
+        }
+        successAlert.className = 'alert alert-success';
+        successAlert.innerHTML = '✅ Patient <strong>' + firstName + ' ' + lastName + '</strong> has been registered successfully! ' +
+          'Patient ID <strong>' + data.id + '</strong> has been assigned. ' +
+          '<a href="patients.html" style="color:var(--green);font-weight:600;">View All Patients →</a>';
+        successAlert.style.display = 'flex';
+        showToast(data.id, firstName + ' ' + lastName);
+        successAlert.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('patient-form').reset();
+        clearFilledHighlights();
+        refreshRegistryStats();
+      })
+      .catch(function(err) {
+        successAlert.className = 'alert alert-error';
+        successAlert.innerHTML = '❌ Network error: ' + err.message;
+        successAlert.style.display = 'flex';
+        showToast(null, 'Network error: ' + err.message, true);
+      });
+    }
+  </script>
+</body>
+</html>

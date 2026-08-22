@@ -2,11 +2,13 @@ import { verifyCheckpoint } from '../../../src/replay/checkpointVerifier'
 import { Checkpoint } from '../../../src/types'
 
 function makeMockPage(url = 'https://example.com/dashboard', elementVisible = true) {
+  const mockLocatorResult = {
+    first:     jest.fn().mockReturnThis(),
+    isVisible: jest.fn().mockResolvedValue(elementVisible)
+  }
   return {
     url:     jest.fn().mockReturnValue(url),
-    locator: jest.fn().mockReturnValue({
-      isVisible: jest.fn().mockResolvedValue(elementVisible)
-    })
+    locator: jest.fn().mockReturnValue(mockLocatorResult)
   } as any
 }
 
@@ -48,6 +50,7 @@ describe('verifyCheckpoint', () => {
       const page = {
         url:     jest.fn(),
         locator: jest.fn().mockReturnValue({
+          first:     jest.fn().mockReturnThis(),
           isVisible: jest.fn().mockRejectedValue(new Error('timeout'))
         })
       } as any

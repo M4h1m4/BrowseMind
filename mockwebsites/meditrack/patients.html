@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patients — MediTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="sidebar-mount"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <span class="topbar-title">Patient Registry</span>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="avatar">AD</div>
+          <span>Dr. A. Davies</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">Patients</span>
+      </nav>
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Patient Registry</h1>
+          <p>Manage all registered patients — search, view profiles, and track medical history.</p>
+        </div>
+        <a href="patient-form.html" class="btn btn-primary">+ Add New Patient</a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 id="patient-count-label">All Patients</h2>
+          <div class="filter-bar" style="margin-bottom:0;">
+            <input type="search" id="search-input" placeholder="Search by name, ID, or condition…" style="min-width:280px;" />
+            <select id="gender-filter">
+              <option value="">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+            <select id="blood-filter">
+              <option value="">All Blood Types</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient ID</th>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Blood Type</th>
+                <th>Condition(s)</th>
+                <th>Phone</th>
+                <th>Insurance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="patients-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="pagination-bar">
+          <span class="pagination-info" id="pagination-info"></span>
+          <span class="page-btn active" onclick="goPage(1)" id="pg1">1</span>
+          <span class="page-btn" onclick="goPage(2)" id="pg2">2</span>
+          <span class="page-btn" style="pointer-events:none;">&rsaquo;</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    document.getElementById('sidebar-mount').innerHTML = MEDITRACK.buildSidebar('patients');
+
+    var allPatients = [];
+    var filtered = [];
+    var PAGE_SIZE = 10;
+    var currentPage = 1;
+
+    // Fetch patients from API (falls back to MEDITRACK.patients for static serving)
+    fetch('/api/patients')
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        allPatients = data;
+        filtered = allPatients.slice();
+        renderTable();
+      })
+      .catch(function() {
+        // Fallback to static data if API not available
+        allPatients = MEDITRACK.patients.slice();
+        filtered = allPatients.slice();
+        renderTable();
+      });
+
+    function renderTable() {
+      var tbody = document.getElementById('patients-tbody');
+      tbody.innerHTML = '';
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var end = Math.min(start + PAGE_SIZE, filtered.length);
+      var page = filtered.slice(start, end);
+
+      if (page.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding:28px;">No patients match your search.</td></tr>';
+      } else {
+        page.forEach(function(p) {
+          var age = MEDITRACK.calculateAge(p.dob);
+          var conds = p.conditions.slice(0, 2).join(', ') + (p.conditions.length > 2 ? ' <span class="badge badge-gray">+' + (p.conditions.length - 2) + '</span>' : '');
+          tbody.innerHTML += '<tr>' +
+            '<td class="td-mono">' + p.id + '</td>' +
+            '<td style="font-weight:500;white-space:nowrap;">' + p.name + '</td>' +
+            '<td>' + age + '</td>' +
+            '<td>' + p.gender + '</td>' +
+            '<td>' + MEDITRACK.getBloodTypeBadge(p.bloodType) + '</td>' +
+            '<td style="max-width:220px;">' + conds + '</td>' +
+            '<td style="white-space:nowrap;">' + p.phone + '</td>' +
+            '<td>' + p.insurance + '</td>' +
+            '<td>' +
+              '<div class="flex-gap">' +
+              '<a href="patient-detail.html?id=' + p.id + '" class="btn btn-sm btn-primary">View Profile</a>' +
+              '<a href="appointment-form.html?patientId=' + p.id + '" class="btn btn-sm btn-secondary">Book Appt</a>' +
+              '</div>' +
+            '</td>' +
+            '</tr>';
+        });
+      }
+
+      // Pagination info
+      document.getElementById('pagination-info').textContent =
+        'Showing ' + (filtered.length === 0 ? 0 : start + 1) + '–' + end + ' of ' + filtered.length + ' patients';
+      document.getElementById('patient-count-label').textContent =
+        'All Patients (' + filtered.length + ')';
+
+      // Update page buttons
+      var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      var pg1 = document.getElementById('pg1');
+      var pg2 = document.getElementById('pg2');
+      pg1.className = 'page-btn' + (currentPage === 1 ? ' active' : '');
+      pg2.style.display = totalPages < 2 ? 'none' : '';
+      pg2.className = 'page-btn' + (currentPage === 2 ? ' active' : '');
+    }
+
+    function goPage(n) {
+      currentPage = n;
+      renderTable();
+    }
+
+    function applyFilters() {
+      var search = document.getElementById('search-input').value.toLowerCase().trim();
+      var gender = document.getElementById('gender-filter').value;
+      var blood = document.getElementById('blood-filter').value;
+
+      filtered = allPatients.filter(function(p) {
+        var matchSearch = !search ||
+          p.name.toLowerCase().includes(search) ||
+          p.id.toLowerCase().includes(search) ||
+          p.conditions.some(function(c){ return c.toLowerCase().includes(search); }) ||
+          p.phone.includes(search);
+        var matchGender = !gender || p.gender === gender;
+        var matchBlood = !blood || p.bloodType === blood;
+        return matchSearch && matchGender && matchBlood;
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    document.getElementById('gender-filter').addEventListener('change', applyFilters);
+    document.getElementById('blood-filter').addEventListener('change', applyFilters);
+
+    renderTable();
+  </script>
+</body>
+</html>

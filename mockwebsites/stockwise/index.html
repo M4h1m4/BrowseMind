@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html" class="active"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Operations Dashboard</h1>
+          <p>Overview of inventory, procurement activity, and alerts — updated daily.</p>
+        </div>
+        <div class="page-header-actions">
+          <span id="dashboard-date" class="text-muted" style="font-size:13px; padding-top:6px;"></span>
+        </div>
+      </div>
+
+      <!-- Alert Banner -->
+      <div class="alert alert-danger" id="critical-alert">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-body">
+          <strong>Critical Stock Alert</strong>
+          <span id="critical-alert-text">Multiple products are critically below their reorder points. Immediate procurement action required.</span>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stat-grid" id="stat-grid">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="margin-bottom: 28px;">
+        <p style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: #6b7280; font-weight: 700; margin-bottom: 12px;">Quick Actions</p>
+        <div class="quick-actions">
+          <a href="new-order.html" class="btn btn-primary">📄 New Purchase Order</a>
+          <a href="inventory.html" class="btn btn-secondary">🔧 Adjust Stock</a>
+          <a href="product-form.html" class="btn btn-secondary">➕ Add Product</a>
+          <a href="reports.html" class="btn btn-secondary">📈 View Reports</a>
+          <a href="suppliers.html" class="btn btn-secondary">🏭 Manage Suppliers</a>
+        </div>
+      </div>
+
+      <!-- Low Stock Alerts Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⚠️ Low Stock Alerts</h2>
+          <div class="card-header-actions">
+            <a href="inventory.html" class="btn btn-sm btn-secondary">View All Inventory</a>
+            <a href="new-order.html" class="btn btn-sm btn-warning">Create Reorder</a>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="low-stock-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Current Stock</th>
+                <th>Reorder Point</th>
+                <th>Stock Level</th>
+                <th>Last Supplier</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="low-stock-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Purchase Orders -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📄 Recent Purchase Orders</h2>
+          <div class="card-header-actions">
+            <a href="orders.html" class="btn btn-sm btn-secondary">View All Orders</a>
+            <a href="new-order.html" class="btn btn-sm btn-primary">+ New Order</a>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" id="recent-orders-table">
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Supplier</th>
+                <th>Order Date</th>
+                <th>Expected Delivery</th>
+                <th>Items</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="recent-orders-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="data.js"></script>
+<script>
+  // Date display
+  document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  const products = STOCKWISE.products;
+  const suppliers = STOCKWISE.suppliers;
+  const orders = STOCKWISE.purchaseOrders;
+
+  function getSupplier(id) {
+    return suppliers.find(s => s.id === id) || { name: 'Unknown' };
+  }
+
+  function getProduct(id) {
+    return products.find(p => p.id === id) || { name: 'Unknown' };
+  }
+
+  function statusBadge(status) {
+    const map = {
+      draft: 'badge-draft', submitted: 'badge-submitted',
+      approved: 'badge-approved', received: 'badge-received', cancelled: 'badge-cancelled'
+    };
+    return `<span class="badge ${map[status] || 'badge-draft'}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
+  }
+
+  function stockClass(product) {
+    const pct = product.stockLevel / (product.reorderPoint * 2);
+    if (product.stockLevel <= product.reorderPoint * 0.5) return 'critical';
+    if (product.stockLevel <= product.reorderPoint) return 'low';
+    return 'ok';
+  }
+
+  // Low stock products
+  const lowStock = products.filter(p => p.stockLevel <= p.reorderPoint);
+
+  // Stat Cards
+  const pendingOrders = orders.filter(o => ['draft','submitted','approved'].includes(o.status)).length;
+  const statGrid = document.getElementById('stat-grid');
+  statGrid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-icon green">🛍️</div>
+      <div class="stat-card-body">
+        <div class="stat-card-label">Total Products</div>
+        <div class="stat-card-value">${products.length}</div>
+        <div class="stat-card-sub">Across ${[...new Set(products.map(p=>p.category))].length} categories</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon orange">⚠️</div>
+      <div class="stat-card-body">
+        <div class="stat-card-label">Low Stock Alerts</div>
+        <div class="stat-card-value alert">${lowStock.length}</div>
+        <div class="stat-card-sub">Products below reorder point</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon blue">📄</div>
+      <div class="stat-card-body">
+        <div class="stat-card-label">Pending Orders</div>
+        <div class="stat-card-value">${pendingOrders}</div>
+        <div class="stat-card-sub">Draft, submitted, approved</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-icon purple">🏭</div>
+      <div class="stat-card-body">
+        <div class="stat-card-label">Total Suppliers</div>
+        <div class="stat-card-value">${suppliers.length}</div>
+        <div class="stat-card-sub">Active vendor relationships</div>
+      </div>
+    </div>
+  `;
+
+  // Low Stock Table
+  const lowStockTbody = document.getElementById('low-stock-tbody');
+  if (lowStock.length === 0) {
+    lowStockTbody.innerHTML = `<tr><td colspan="8" class="table-empty">No low stock alerts at this time.</td></tr>`;
+  } else {
+    lowStockTbody.innerHTML = lowStock.map(p => {
+      const cls = stockClass(p);
+      const supplier = getSupplier(p.supplierId);
+      const pct = Math.min(100, Math.round((p.stockLevel / (p.reorderPoint * 2)) * 100));
+      const rowClass = cls === 'critical' ? 'row-critical' : 'row-alert';
+      return `<tr class="${rowClass}">
+        <td><a href="product-detail.html?id=${p.id}" style="font-weight:600;">${p.name}</a></td>
+        <td><span class="mono">${p.sku}</span></td>
+        <td><span class="badge badge-${p.category === 'Electronics' ? 'electronics' : p.category === 'Office Supplies' ? 'office' : p.category === 'Furniture' ? 'furniture' : p.category === 'Tools' ? 'tools' : 'consumables'}">${p.category}</span></td>
+        <td>
+          <span class="low-stock-warning">
+            <span class="warning-icon">${cls === 'critical' ? '🔴' : '🟡'}</span>
+            <strong>${p.stockLevel} ${p.unit}</strong>
+          </span>
+        </td>
+        <td>${p.reorderPoint} ${p.unit}</td>
+        <td>
+          <div class="stock-indicator">
+            <div class="stock-bar-wrap">
+              <div class="stock-bar bar-${cls}" style="width:${pct}%"></div>
+            </div>
+            <span class="stock-label label-${cls}">${p.stockLevel}/${p.reorderPoint}</span>
+          </div>
+        </td>
+        <td>${supplier.name}</td>
+        <td><a href="new-order.html" class="btn btn-sm btn-warning">Reorder</a></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Recent Orders (last 5 by date, sorted descending)
+  const sortedOrders = [...orders].sort((a, b) => b.orderDate.localeCompare(a.orderDate)).slice(0, 5);
+  const recentTbody = document.getElementById('recent-orders-tbody');
+  recentTbody.innerHTML = sortedOrders.map(o => {
+    const supplier = getSupplier(o.supplierId);
+    return `<tr>
+      <td><a href="order-detail.html?id=${o.id}" class="text-bold mono">${o.id}</a></td>
+      <td>${supplier.name}</td>
+      <td>${new Date(o.orderDate).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</td>
+      <td>${new Date(o.expectedDelivery).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</td>
+      <td>${o.items.length} item${o.items.length !== 1 ? 's' : ''}</td>
+      <td class="text-bold">$${o.totalAmount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+      <td>${statusBadge(o.status)}</td>
+      <td><a href="order-detail.html?id=${o.id}" class="btn btn-sm btn-secondary">View</a></td>
+    </tr>`;
+  }).join('');
+
+  // Update critical alert
+  const criticals = lowStock.filter(p => p.stockLevel <= p.reorderPoint * 0.5);
+  if (criticals.length === 0) {
+    document.getElementById('critical-alert').style.display = 'none';
+  } else {
+    document.getElementById('critical-alert-text').textContent =
+      `${criticals.length} product(s) are critically low: ${criticals.map(p=>p.name).join(', ')}. Immediate procurement action required.`;
+  }
+</script>
+</body>
+</html>

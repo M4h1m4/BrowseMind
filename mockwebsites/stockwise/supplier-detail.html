@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supplier Detail — StockWise</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <span class="brand-text">StockWise</span>
+        <span class="brand-sub">Inventory & Procurement</span>
+      </div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="index.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+      <li><a href="products.html"><span class="nav-icon">🛍️</span> Products</a></li>
+      <li><a href="inventory.html"><span class="nav-icon">📋</span> Inventory</a></li>
+      <li><a href="orders.html"><span class="nav-icon">📄</span> Purchase Orders</a></li>
+      <li><a href="suppliers.html" class="active"><span class="nav-icon">🏭</span> Suppliers</a></li>
+      <li><a href="reports.html"><span class="nav-icon">📈</span> Reports</a></li>
+    </ul>
+    <div class="sidebar-footer">StockWise v3.4.1 &nbsp;|&nbsp; Build 2026.08</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">StockWise</span>
+        <span class="topbar-subtitle">Inventory &amp; Procurement Management</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user">
+          <span class="user-avatar">JD</span>
+          James Dalton
+        </span>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">›</span>
+        <a href="suppliers.html">Suppliers</a>
+        <span class="sep">›</span>
+        <span class="current" id="bc-supplier-name">Loading…</span>
+      </div>
+
+      <div id="supplier-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const params = new URL(location.href).searchParams;
+  const supplierId = params.get('id') || 'SUP001';
+
+  const supplier = STOCKWISE.suppliers.find(s => s.id === supplierId);
+  const products = STOCKWISE.products;
+  const orders = STOCKWISE.purchaseOrders;
+
+  function starsHTML(rating) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      html += i <= rating ? '★' : '<span class="empty">★</span>';
+    }
+    return `<span class="stars">${html}</span>`;
+  }
+
+  function statusBadge(status) {
+    const map = {
+      draft: 'badge-draft', submitted: 'badge-submitted',
+      approved: 'badge-approved', received: 'badge-received', cancelled: 'badge-cancelled'
+    };
+    const labels = { draft: '○ Draft', submitted: '⋯ Submitted', approved: '✓ Approved', received: '✔ Received', cancelled: '✕ Cancelled' };
+    return `<span class="badge ${map[status] || 'badge-draft'}">${labels[status] || status}</span>`;
+  }
+
+  function formatDate(d) {
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function stockClass(p) {
+    if (p.stockLevel <= p.reorderPoint * 0.5) return 'critical';
+    if (p.stockLevel <= p.reorderPoint) return 'low';
+    return 'ok';
+  }
+
+  function categoryBadgeClass(cat) {
+    const map = {
+      'Electronics': 'badge-electronics', 'Office Supplies': 'badge-office',
+      'Furniture': 'badge-furniture', 'Tools': 'badge-tools', 'Consumables': 'badge-consumables'
+    };
+    return map[cat] || 'badge-draft';
+  }
+
+  if (!supplier) {
+    document.getElementById('supplier-content').innerHTML = `
+      <div class="alert alert-danger">
+        <span class="alert-icon">❌</span>
+        <div class="alert-body"><strong>Supplier Not Found</strong> No supplier with ID "${supplierId}" exists.</div>
+      </div>
+      <a href="suppliers.html" class="btn btn-secondary">← Back to Suppliers</a>`;
+    document.getElementById('bc-supplier-name').textContent = 'Not Found';
+  } else {
+    document.getElementById('bc-supplier-name').textContent = supplier.name;
+    document.title = `${supplier.name} — StockWise`;
+
+    // Supplier's products
+    const supplierProducts = products.filter(p => p.supplierId === supplierId);
+    // Supplier's orders
+    const supplierOrders = orders.filter(o => o.supplierId === supplierId).sort((a,b) => b.orderDate.localeCompare(a.orderDate));
+
+    // Stats
+    const totalOrders = supplierOrders.length;
+    const totalOrderValue = supplierOrders.reduce((s, o) => s + o.totalAmount, 0);
+    const receivedOrders = supplierOrders.filter(o => o.status === 'received').length;
+    const activeOrders = supplierOrders.filter(o => ['draft','submitted','approved'].includes(o.status)).length;
+
+    const ratingClass = supplier.rating >= 4 ? 'text-green' : supplier.rating === 3 ? 'text-orange' : 'text-red';
+
+    const productsRows = supplierProducts.length === 0
+      ? `<tr><td colspan="6" class="table-empty">No products sourced from this supplier.</td></tr>`
+      : supplierProducts.map(p => {
+          const cls = stockClass(p);
+          const pct = Math.min(100, Math.round((p.stockLevel / (p.reorderPoint * 2)) * 100));
+          const rowCls = cls === 'critical' ? 'row-critical' : cls === 'low' ? 'row-alert' : '';
+          return `<tr class="${rowCls}">
+            <td><span class="mono">${p.sku}</span></td>
+            <td><a href="product-detail.html?id=${p.id}" style="font-weight:600;">${p.name}</a></td>
+            <td><span class="badge ${categoryBadgeClass(p.category)}">${p.category}</span></td>
+            <td>
+              <div class="stock-indicator">
+                <div class="stock-bar-wrap">
+                  <div class="stock-bar bar-${cls}" style="width:${pct}%"></div>
+                </div>
+                <span class="stock-label label-${cls}">${p.stockLevel}/${p.reorderPoint}</span>
+              </div>
+            </td>
+            <td>$${p.unitPrice.toFixed(2)}</td>
+            <td>
+              ${cls === 'critical'
+                ? '<span class="badge badge-critical">🔴 Critical</span>'
+                : cls === 'low'
+                ? '<span class="badge badge-low">⚠️ Low</span>'
+                : '<span class="badge badge-ok">✓ OK</span>'}
+            </td>
+          </tr>`;
+        }).join('');
+
+    const ordersRows = supplierOrders.length === 0
+      ? `<tr><td colspan="6" class="table-empty">No orders from this supplier.</td></tr>`
+      : supplierOrders.map(o => `<tr>
+          <td><a href="order-detail.html?id=${o.id}" class="text-bold mono">${o.id}</a></td>
+          <td>${formatDate(o.orderDate)}</td>
+          <td>${formatDate(o.expectedDelivery)}</td>
+          <td>${o.items.length} item${o.items.length !== 1 ? 's' : ''}</td>
+          <td class="text-bold">$${o.totalAmount.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+          <td>${statusBadge(o.status)}</td>
+        </tr>`).join('');
+
+    const termsClass = supplier.paymentTerms === 'Net15' ? 'badge-approved' : supplier.paymentTerms === 'Net30' ? 'badge-submitted' : 'badge-draft';
+
+    document.getElementById('supplier-content').innerHTML = `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>${supplier.name}</h1>
+          <p><span class="mono">${supplier.id}</span> &nbsp;|&nbsp; ${starsHTML(supplier.rating)} <span class="${ratingClass}" style="font-size:13px; font-weight:700;">${supplier.rating}/5</span> &nbsp;|&nbsp; <span class="badge ${termsClass}">${supplier.paymentTerms}</span></p>
+        </div>
+        <div class="page-header-actions">
+          <a href="new-order.html" class="btn btn-primary">📄 New Order</a>
+          <a href="suppliers.html" class="btn btn-secondary">← Back</a>
+        </div>
+      </div>
+
+      <!-- Supplier Stat Strip -->
+      <div class="summary-strip" style="margin-bottom:24px;">
+        <div class="summary-strip-item">
+          <div class="s-label">Total Orders</div>
+          <div class="s-value">${totalOrders}</div>
+        </div>
+        <div class="summary-strip-item">
+          <div class="s-label">Total Order Value</div>
+          <div class="s-value">$${Math.round(totalOrderValue).toLocaleString()}</div>
+        </div>
+        <div class="summary-strip-item">
+          <div class="s-label">Received Orders</div>
+          <div class="s-value">${receivedOrders}</div>
+        </div>
+        <div class="summary-strip-item">
+          <div class="s-label">Active Orders</div>
+          <div class="s-value">${activeOrders}</div>
+        </div>
+        <div class="summary-strip-item">
+          <div class="s-label">Products Supplied</div>
+          <div class="s-value">${supplierProducts.length}</div>
+        </div>
+      </div>
+
+      <!-- Supplier Info Grid -->
+      <div class="card">
+        <div class="card-header"><h3>Supplier Profile</h3></div>
+        <div class="info-grid">
+          <div class="info-grid-item">
+            <div class="info-label">Supplier ID</div>
+            <div class="info-value"><span class="mono">${supplier.id}</span></div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Company Name</div>
+            <div class="info-value">${supplier.name}</div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Contact Person</div>
+            <div class="info-value">${supplier.contactPerson}</div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Email</div>
+            <div class="info-value"><a href="mailto:${supplier.email}" style="color:#16a34a;">${supplier.email}</a></div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Phone</div>
+            <div class="info-value"><a href="tel:${supplier.phone}">${supplier.phone}</a></div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Payment Terms</div>
+            <div class="info-value"><span class="badge ${termsClass}">${supplier.paymentTerms}</span></div>
+          </div>
+          <div class="info-grid-item">
+            <div class="info-label">Performance Rating</div>
+            <div class="info-value">${starsHTML(supplier.rating)} <span class="${ratingClass}" style="font-weight:700;">${supplier.rating}/5</span></div>
+          </div>
+          <div class="info-grid-item" style="border-right:none; grid-column: 1 / -1;">
+            <div class="info-label">Business Address</div>
+            <div class="info-value">${supplier.address}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Their Products -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Products Supplied (${supplierProducts.length})</h3>
+          <a href="products.html" class="btn btn-sm btn-secondary">All Products</a>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Stock Level</th>
+                <th>Unit Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${productsRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Order History -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Order History (${supplierOrders.length})</h3>
+          <a href="new-order.html" class="btn btn-sm btn-primary">+ New Order</a>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Order Date</th>
+                <th>Expected Delivery</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${ordersRows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>

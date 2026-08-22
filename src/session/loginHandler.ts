@@ -4,7 +4,8 @@ import { storeAuthState } from './authStore'
 export async function captureAndStoreAuthState(
   context: BrowserContext,
   page: Page,
-  targetApp: string
+  targetApp: string,
+  tenantId: string
 ): Promise<void> {
   const domain = new URL(targetApp).hostname
 
@@ -19,7 +20,7 @@ export async function captureAndStoreAuthState(
     return result
   })
 
-  storeAuthState(domain, {
+  storeAuthState(tenantId, domain, {
     domain,
     cookies,
     localStorage: localStorageData,

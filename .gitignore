@@ -2,17 +2,30 @@ node_modules/
 dist/
 .env
 
-# Database and evidence — runtime files, never committed
+# Runtime database and run evidence — regenerated locally, not committed for now
 db/
 evidence/
+
+# Local planning notes, by name — a blanket *.md rule would also swallow
+# REPORT.md and KNOWN_LIMITATIONS.md, which belong in the repo.
+CHANGES.md
+pending_codereview.md
+phase1.md
+*.docx
 
 # macOS
 .DS_Store
 
-# PDF attachments
-*.pdf
+# Local runtime databases for the mock sites
+*.db
+*.db-shm
+*.db-wal
 
-# Planning documents — local only
-*.md
-!README.md
-*.docx
+# Scratch output from data-collection runs
+out/
+output/
+output.json
+results.json
+
+# Assignment briefs — reference only, not part of the deliverable
+*.pdf

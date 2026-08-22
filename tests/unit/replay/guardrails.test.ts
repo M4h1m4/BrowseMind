@@ -13,6 +13,14 @@ describe('classifyAction', () => {
     it('classifies navigate as read-only', () => {
       expect(classifyAction('navigate', 'Navigate to employee list page')).toBe('read-only')
     })
+
+    it('classifies extract as read-only', () => {
+      expect(classifyAction('extract', 'Extract patient name from table row')).toBe('read-only')
+    })
+
+    it('classifies loop as read-only', () => {
+      expect(classifyAction('loop', 'Loop over each row in the results table')).toBe('read-only')
+    })
   })
 
   describe('write actions', () => {
@@ -26,6 +34,10 @@ describe('classifyAction', () => {
 
     it('classifies keydown as write', () => {
       expect(classifyAction('keydown', 'Press Enter to submit')).toBe('write')
+    })
+
+    it('classifies output as write', () => {
+      expect(classifyAction('output', 'Write results to output file')).toBe('write')
     })
   })
 
@@ -60,46 +72,67 @@ describe('isAllowedDomain', () => {
   it('returns true when url is on the same hostname', () => {
     expect(isAllowedDomain(
       'https://example.com/employees',
-      'https://example.com'
+      ['https://example.com']
     )).toBe(true)
   })
 
   it('returns true for a different path on the same hostname', () => {
     expect(isAllowedDomain(
       'https://opensource-demo.orangehrmlive.com/web/index.php/auth/login',
-      'https://opensource-demo.orangehrmlive.com'
+      ['https://opensource-demo.orangehrmlive.com']
     )).toBe(true)
   })
 
-  it('returns false when hostname is different', () => {
+  it('returns false when hostname is not in the allowed list', () => {
     expect(isAllowedDomain(
       'https://evil.com/steal',
-      'https://example.com'
+      ['https://example.com']
     )).toBe(false)
   })
 
   it('returns false for a subdomain lookalike attack', () => {
     expect(isAllowedDomain(
       'https://example.com.evil.com',
-      'https://example.com'
+      ['https://example.com']
     )).toBe(false)
   })
 
-  it('returns true for a genuine subdomain of the allowed host', () => {
+  it('returns true for a genuine subdomain of an allowed host', () => {
     expect(isAllowedDomain(
       'https://api.example.com/data',
-      'https://example.com'
+      ['https://example.com']
     )).toBe(true)
   })
 
   it('returns true for a relative URL (treated as same domain)', () => {
-    expect(isAllowedDomain('/employees?page=2', 'https://example.com')).toBe(true)
+    expect(isAllowedDomain('/employees?page=2', ['https://example.com'])).toBe(true)
   })
 
   it('returns false when domains differ even with same path', () => {
     expect(isAllowedDomain(
       'https://other.com/employees',
-      'https://example.com'
+      ['https://example.com']
     )).toBe(false)
+  })
+
+  it('returns true when url matches the second domain in a multi-domain list', () => {
+    expect(isAllowedDomain(
+      'https://auth.example.com/login',
+      ['https://app.example.com', 'https://auth.example.com']
+    )).toBe(true)
+  })
+
+  it('returns false when url matches none of the allowed domains', () => {
+    expect(isAllowedDomain(
+      'https://evil.com/steal',
+      ['https://app.example.com', 'https://auth.example.com']
+    )).toBe(false)
+  })
+
+  it('accepts bare hostnames (without scheme) in the allowed list', () => {
+    expect(isAllowedDomain(
+      'https://pay.stripe.com/checkout',
+      ['https://app.example.com', 'pay.stripe.com']
+    )).toBe(true)
   })
 })
