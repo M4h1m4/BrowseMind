@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   browsemind:
-    image: interfaceai_browsemind
+    image: m4h1m4/browsemind:latest
     build:
       context: .
       target: browsemind
@@ -27,7 +27,7 @@ services:
       retries: 5
 
   meditrack:
-    image: interfaceai_mediatrack
+    image: m4h1m4/mediatrack:latest
     build:
       context: .
       target: meditrack
@@ -46,7 +46,7 @@ services:
       retries: 5
 
   stockwise:
-    image: interfaceai_stockwise
+    image: m4h1m4/stockwise:latest
     build:
       context: .
       target: stockwise
