@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrowseMind — Operator UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f6fa;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+    header span { font-size: 0.85rem; color: #8888aa; }
+
+    main {
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: #1a1a2e;
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+      margin-top: 14px;
+    }
+    label:first-of-type { margin-top: 0; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      transition: border-color .15s;
+      background: #fafafa;
+    }
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #6c63ff;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .row { display: flex; gap: 14px; }
+    .row > * { flex: 1; }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      transition: opacity .15s, background .15s;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary   { background: #6c63ff; color: #fff; }
+    .btn-primary:not(:disabled):hover { background: #5a52d5; }
+    .btn-success   { background: #22c55e; color: #fff; }
+    .btn-success:not(:disabled):hover { background: #16a34a; }
+    .btn-warning   { background: #f59e0b; color: #fff; }
+    .btn-warning:not(:disabled):hover { background: #d97706; }
+    .btn-danger    { background: #ef4444; color: #fff; }
+    .btn-danger:not(:disabled):hover  { background: #dc2626; }
+    .btn-ghost     { background: #f1f1f5; color: #333; }
+    .btn-ghost:not(:disabled):hover   { background: #e2e2eb; }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+    /* ── Status banner ── */
+    .status-banner {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .status-banner .icon { font-size: 1.2rem; flex-shrink: 0; }
+
+    .banner-running  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .banner-success  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .banner-failed   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .banner-login    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .banner-stuck    { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .banner-confirm  { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid #bfdbfe;
+      border-top-color: #1d4ed8;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    /* ── Step progress ── */
+    .step-info {
+      font-size: 0.82rem;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    /* ── Screenshot preview ── */
+    .screenshot-preview {
+      margin-top: 12px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e0e0e0;
+      max-width: 100%;
+    }
+    .screenshot-preview img { width: 100%; display: block; }
+
+    /* ── Code / pre blocks ── */
+    pre {
+      background: #1a1a2e;
+      color: #c8f6c8;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
+    /* ── Artifact cards ── */
+    .artifact-list { display: flex; flex-direction: column; gap: 12px; }
+    .artifact-card {
+      border: 1.5px solid #e8e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      background: #fafafa;
+      transition: border-color .15s;
+    }
+    .artifact-card:hover { border-color: #c4b5fd; }
+    .artifact-meta { flex: 1; min-width: 0; }
+    .artifact-goal {
+      font-weight: 600;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .artifact-sub {
+      font-size: 0.78rem;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+
+    /* ── Error banner ── */
+    #error-banner {
+      display: none;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+
+    /* ── Hidden utility ── */
+    .hidden { display: none !important; }
+
+    /* ── Empty states ── */
+    .empty-state {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.85rem;
+      padding: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>BrowseMind</h1>
+  <span>Operator UI</span>
+</header>
+
+<main>
+
+  <!-- ── Capture Form ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Start New Automation</h2>
+
+    <label for="nl-goal">What do you want to automate?</label>
+    <textarea id="nl-goal" rows="3"
+      placeholder="e.g. Log in to OrangeHRM and submit a leave request for tomorrow"></textarea>
+
+    <div class="row">
+      <div>
+        <label for="target-app">Target App URL</label>
+        <input type="text" id="target-app" placeholder="https://opensource-demo.orangehrmlive.com" />
+      </div>
+      <div>
+        <label for="tenant-id">Tenant ID</label>
+        <input type="text" id="tenant-id" placeholder="my-org" />
+      </div>
+    </div>
+
+    <div id="error-banner"></div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-capture" onclick="startCapture()">Start Capture</button>
+      <button class="btn-ghost" id="btn-replay-form" onclick="showReplayForm()">Replay Artifact</button>
+    </div>
+
+    <!-- Replay sub-form (hidden by default) -->
+    <div id="replay-form" class="hidden">
+      <hr class="divider" />
+      <label for="artifact-id-input">Artifact ID</label>
+      <input type="text" id="artifact-id-input" placeholder="paste artifact ID here" />
+      <div class="btn-row">
+        <button class="btn-primary" onclick="startReplayById()">Start Replay</button>
+        <button class="btn-ghost" onclick="hideReplayForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Live Run Status ───────────────────────────────────────────────────── -->
+  <div class="card hidden" id="run-status-card">
+    <h2>Run Status <span id="run-id-label" style="font-weight:400;color:#888;font-size:0.82rem;margin-left:6px;"></span></h2>
+
+    <div id="status-area"></div>
+  </div>
+
+  <!-- ── Artifacts Dashboard ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h2 style="margin-bottom:0;">Saved Artifacts</h2>
+      <button class="btn-ghost" style="font-size:0.8rem;padding:6px 12px;" onclick="loadArtifacts()">Refresh</button>
+    </div>
+    <div id="artifact-list">
+      <div class="empty-state">Enter a Tenant ID above and click Refresh to see saved automations.</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let currentRunId     = null
+let pollHandle       = null
+let artifactPollHandle = null
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('error-banner')
+  el.textContent = msg
+  el.style.display = 'block'
+}
+function clearError() {
+  const el = document.getElementById('error-banner')
+  el.textContent = ''
+  el.style.display = 'none'
+}
+
+function tenantId() { return document.getElementById('tenant-id').value.trim() }
+
+function stopPolling() {
+  if (pollHandle) { clearInterval(pollHandle); pollHandle = null }
+}
+
+function startPolling() {
+  stopPolling()
+  pollStatus()
+  pollHandle = setInterval(pollStatus, 2000)
+}
+
+// ── Capture ───────────────────────────────────────────────────────────────────
+async function startCapture() {
+  clearError()
+  const goal      = document.getElementById('nl-goal').value.trim()
+  const targetApp = document.getElementById('target-app').value.trim()
+  const tid       = tenantId()
+
+  if (!goal)      { showError('Please describe what you want to automate.'); return }
+  if (!targetApp) { showError('Please enter the target app URL.'); return }
+  if (!tid)       { showError('Please enter a Tenant ID.'); return }
+
+  setBtnCapture(true)
+
+  try {
+    const res  = await fetch('/api/v1/capture/run', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ goal, targetApp, tenantId: tid })
+    })
+    const data = await res.json()
+
+    if (!res.ok) { showError(data.error || 'Failed to start capture.'); setBtnCapture(false); return }
+
+    currentRunId = data.runId
+    document.getElementById('run-id-label').textContent = `#${currentRunId}`
+    document.getElementById('run-status-card').classList.remove('hidden')
+    renderStatus({ status: 'running', currentStep: 0 })
+    startPolling()
+  } catch (e) {
+    showError('Network error — is the server running?')
+    setBtnCapture(false)
+  }
+}
+
+function setBtnCapture(disabled) {
+  const btn = document.getElementById('btn-capture')
+  btn.disabled = disabled
+  btn.textContent = disabled ? 'Running…' : 'Start Capture'
+}
+
+// ── Replay ────────────────────────────────────────────────────────────────────
+function showReplayForm()  { document.getElementById('replay-form').classList.remove('hidden') }
+function hideReplayForm()  { document.getElementById('replay-form').classList.add('hidden') }
+
+async function startReplayById() {
+  clearError()
+  const artifactId = document.getElementById('artifact-id-input').value.trim()
+  const tid        = tenantId()
+
+  if (!artifactId) { showError('Please enter an Artifact ID.'); return }
+  if (!tid)        { showError('Please enter a Tenant ID.'); return }
+
+  await launchReplay(artifactId, tid)
+  hideReplayForm()
+}
+
+async function launchReplay(artifactId, tid) {
+  stopPolling()
+  try {
+    const res  = await fetch('/api/v1/replay/run', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ artifactId, tenantId: tid, inputs: {} })
+    })
+    const data = await res.json()
+
+    if (!res.ok) { showError(data.error || 'Failed to start replay.'); return }
+
+    currentRunId = data.runId
+    document.getElementById('run-id-label').textContent = `#${currentRunId}`
+    document.getElementById('run-status-card').classList.remove('hidden')
+    renderStatus({ status: 'running', currentStep: 0 })
+    startPolling()
+    setBtnCapture(true)
+  } catch (e) {
+    showError('Network error — is the server running?')
+  }
+}
+
+// ── Status Polling ────────────────────────────────────────────────────────────
+async function pollStatus() {
+  if (!currentRunId) return
+
+  try {
+    const res  = await fetch(`/api/v1/runs/${currentRunId}/status`)
+    if (!res.ok) return
+    const data = await res.json()
+    renderStatus(data)
+  } catch { /* network blip — try again next tick */ }
+}
+
+function renderStatus(data) {
+  const area = document.getElementById('status-area')
+
+  switch (data.status) {
+    case 'running':
+      area.innerHTML = `
+        <div class="status-banner banner-running">
+          <div class="spinner"></div>
+          <div>
+            <strong>Running</strong> — step ${data.currentStep ?? 0} in progress…
+            <div class="step-info" style="margin-top:4px;">BrowseMind is automating the task in the background browser window.</div>
+          </div>
+        </div>`
+      break
+
+    case 'login_required':
+      stopPolling()
+      area.innerHTML = `
+        <div class="status-banner banner-login">
+          <span class="icon">🔐</span>
+          <div>
+            <strong>Login required at step ${data.currentStep}</strong>
+            <div style="margin-top:4px;">Please log in manually in the browser window that BrowseMind opened.
+            When you are fully logged in and the dashboard has loaded, click <strong>Resume</strong>.</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-warning" onclick="resumeRun('')">Resume — I'm logged in</button>
+        </div>`
+      break
+
+    case 'stuck':
+      stopPolling()
+      const ir  = data.interventionRequest || {}
+      const img = ir.screenshotPath
+        ? `<div class="screenshot-preview"><img src="/${ir.screenshotPath.replace(/^\//, '')}" alt="screenshot before stuck" /></div>`
+        : ''
+      area.innerHTML = `
+        <div class="status-banner banner-stuck">
+          <span class="icon">⚠️</span>
+          <div>
+            <strong>Stuck at step ${data.currentStep}</strong>
+            <div style="margin-top:4px;">${escHtml(ir.whyStuck || 'Element could not be located.')}</div>
+          </div>
+        </div>
+        ${img}
+        <label style="margin-top:16px;">Notes for BrowseMind (optional)</label>
+        <textarea id="handoff-notes" placeholder="Describe what you did to fix the situation…"></textarea>
+        <div class="btn-row">
+          <button class="btn-success" onclick="resumeRun(document.getElementById('handoff-notes').value)">I'm Done — Resume</button>
+          <button class="btn-danger"  onclick="cancelRun()">Cancel Run</button>
+        </div>`
+      break
+
+    case 'confirmation_required':
+      stopPolling()
+      area.innerHTML = `
+        <div class="status-banner banner-confirm">
+          <span class="icon">🛑</span>
+          <div>
+            <strong>Confirmation required at step ${data.currentStep}</strong>
+            <div style="margin-top:4px;">BrowseMind detected a potentially destructive action and paused for your approval.</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-success" onclick="resumeRun('')">Approve — Continue</button>
+          <button class="btn-danger"  onclick="cancelRun()">Cancel Run</button>
+        </div>`
+      break
+
+    case 'success':
+      stopPolling()
+      setBtnCapture(false)
+      const outputs = data.outputs ? `<pre>${escHtml(JSON.stringify(data.outputs, null, 2))}</pre>` : ''
+      area.innerHTML = `
+        <div class="status-banner banner-success">
+          <span class="icon">✅</span>
+          <div>
+            <strong>Completed successfully</strong>
+            ${data.artifactId ? `<div style="margin-top:4px;">Artifact saved — ID: <code>${escHtml(data.artifactId)}</code></div>` : ''}
+          </div>
+        </div>
+        ${outputs}
+        <div class="btn-row">
+          <button class="btn-ghost" onclick="fetchLog()">View Full Log</button>
+          <button class="btn-primary" onclick="resetUI()">Start Another</button>
+        </div>`
+      loadArtifacts()
+      break
+
+    case 'failed':
+      stopPolling()
+      setBtnCapture(false)
+      const errDetail = data.error ? `<pre>${escHtml(data.error.observed || JSON.stringify(data.error))}</pre>` : ''
+      area.innerHTML = `
+        <div class="status-banner banner-failed">
+          <span class="icon">❌</span>
+          <div>
+            <strong>Run failed at step ${data.currentStep}</strong>
+            ${data.error?.expected ? `<div style="margin-top:4px;">Expected: ${escHtml(data.error.expected)}</div>` : ''}
+          </div>
+        </div>
+        ${errDetail}
+        <div class="btn-row">
+          <button class="btn-ghost" onclick="fetchLog()">View Full Log</button>
+          <button class="btn-primary" onclick="resetUI()">Start Another</button>
+        </div>`
+      break
+
+    default:
+      area.innerHTML = `<div class="status-banner banner-running"><span class="icon">ℹ️</span><strong>${escHtml(data.status)}</strong></div>`
+  }
+}
+
+// ── Resume / Cancel ───────────────────────────────────────────────────────────
+async function resumeRun(notes) {
+  if (!currentRunId) return
+  try {
+    const res = await fetch(`/api/v1/runs/${currentRunId}/resume`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ humanNotes: notes || '' })
+    })
+    if (res.ok) {
+      renderStatus({ status: 'running', currentStep: '?' })
+      startPolling()
+    }
+  } catch { showError('Failed to send resume signal.') }
+}
+
+function cancelRun() {
+  stopPolling()
+  currentRunId = null
+  setBtnCapture(false)
+  document.getElementById('run-status-card').classList.add('hidden')
+}
+
+// ── Full Log Viewer ───────────────────────────────────────────────────────────
+async function fetchLog() {
+  if (!currentRunId) return
+  try {
+    const res  = await fetch(`/api/v1/runs/${currentRunId}/log`)
+    const data = await res.json()
+    if (!res.ok) { showError(data.error || 'Log not yet available.'); return }
+
+    const area = document.getElementById('status-area')
+    const existing = area.innerHTML
+    area.innerHTML = existing + `
+      <hr class="divider" />
+      <strong style="font-size:0.85rem;">Full Run Log</strong>
+      <pre>${escHtml(JSON.stringify(data.log, null, 2))}</pre>`
+  } catch { showError('Could not fetch run log.') }
+}
+
+// ── Artifacts Dashboard ───────────────────────────────────────────────────────
+async function loadArtifacts() {
+  const tid = tenantId()
+  if (!tid) {
+    document.getElementById('artifact-list').innerHTML =
+      '<div class="empty-state">Enter a Tenant ID above to see saved automations.</div>'
+    return
+  }
+
+  try {
+    const res  = await fetch(`/api/v1/artifacts?tenantId=${encodeURIComponent(tid)}`)
+    const data = await res.json()
+    if (!res.ok) return
+
+    const list = data.artifacts || []
+    const container = document.getElementById('artifact-list')
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty-state">No saved artifacts yet. Run a capture to create one.</div>'
+      return
+    }
+
+    container.innerHTML = '<div class="artifact-list">' +
+      list.map(a => `
+        <div class="artifact-card">
+          <div class="artifact-meta">
+            <div class="artifact-goal" title="${escHtml(a.goal)}">${escHtml(a.goal)}</div>
+            <div class="artifact-sub">${escHtml(a.targetApp)} &nbsp;·&nbsp; ${new Date(a.createdAt).toLocaleString()} &nbsp;·&nbsp; v${a.version}</div>
+            <div class="artifact-sub" style="margin-top:2px;font-family:monospace;font-size:0.73rem;color:#aaa;">${escHtml(a.artifactId)}</div>
+          </div>
+          <button class="btn-primary" style="flex-shrink:0;white-space:nowrap;"
+            onclick="launchReplay('${escHtml(a.artifactId)}', '${escHtml(a.tenantId)}')">
+            ▶ Replay
+          </button>
+        </div>`).join('') +
+    '</div>'
+  } catch { /* silently ignore — server may be starting */ }
+}
+
+// ── UI Reset ──────────────────────────────────────────────────────────────────
+function resetUI() {
+  stopPolling()
+  currentRunId = null
+  setBtnCapture(false)
+  document.getElementById('run-status-card').classList.add('hidden')
+  document.getElementById('status-area').innerHTML = ''
+  document.getElementById('nl-goal').value = ''
+  clearError()
+}
+
+// ── Escape HTML ───────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (str == null) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+// Auto-load artifacts whenever tenant-id changes
+document.getElementById('tenant-id').addEventListener('change', loadArtifacts)
+</script>
+</body>
+</html>

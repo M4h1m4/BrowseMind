@@ -1,12 +1,14 @@
 import path from 'path'
 import express, { Request, Response } from 'express'
 import { router } from './api/routes'
+import { uiRouter } from './ui/router'
 import { errorHandler } from './api/middleware/errorHandler'
 import { operatorRouter } from './operator/ui'
 
 export const app = express()
 app.use(express.json())
 app.use('/api/v1', router)
+app.use('/', uiRouter)
 
 // Serve screenshots and other evidence files statically
 app.use('/evidence', express.static(path.join(process.cwd(), 'evidence')))

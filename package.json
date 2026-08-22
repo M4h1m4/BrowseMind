@@ -4,7 +4,7 @@
   "description": "Computer-use agent that records LLM-driven browser sessions as reusable capabilities and replays them deterministically",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/ui/index.html dist/ui/index.html",
     "dev": "nodemon --exec ts-node src/server.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
