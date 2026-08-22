@@ -10,6 +10,16 @@ import { getAuthState } from '../session/authStore'
 import { createRunContext, setVar, resolveTemplate } from './runContext'
 import type { RunContext } from './runContext'
 import { injectCursor, moveCursor, clickAnimation } from './cursorOverlay'
+import { waitForHandoff } from '../session/handoffSignal'
+
+/** Screenshot into evidence/, returning the path recorded in the run log. */
+async function captureScreenshot(page: Page, runId: string, stepNum: number, label: string): Promise<string> {
+  const dir = path.join(process.cwd(), 'evidence', 'screenshots')
+  fs.mkdirSync(dir, { recursive: true })
+  const filename = `${runId}-step${stepNum}-${label}.png`
+  await page.screenshot({ path: path.join(dir, filename), fullPage: false })
+  return `/evidence/screenshots/${filename}`
+}
 
 // ── Helper: does the step list (recursively) contain any 'output' step? ────────
 function artifactHasOutputStep(steps: Step[]): boolean {
@@ -27,7 +37,9 @@ async function executeStep(
   inputs: Record<string, unknown>,
   insideLoop: boolean,
   runState: RunState,
-  effectiveAllowWrites: boolean
+  effectiveAllowWrites: boolean,
+  /** False on the retry that follows a human handoff, so we escalate at most once. */
+  mayEscalate: boolean = true
 ): Promise<{ status: 'success' | 'failed'; errorDetails?: string }> {
 
   // ── Guardrail: action classification ───────────────────────────────────────
@@ -230,7 +242,12 @@ async function executeStep(
           if (located.locator) {
             await located.locator.click({ timeout: 5000 })
           } else {
-            await assertClickable(page, located.x, located.y, step.description)
+            // Only capture-time coordinates need proving. When a named strategy
+            // matched, the coordinates came from that element's own box and are
+            // trustworthy even if no Locator handle came back with them.
+            if (!located.foundByLocator) {
+              await assertClickable(page, located.x, located.y, step.description)
+            }
             await page.mouse.click(located.x, located.y)
           }
 
@@ -298,8 +315,11 @@ async function executeStep(
               await located.locator.fill(value ?? '', { timeout: 5000 })
             } else {
               // Coordinate-only path: typing at a point that hits nothing is a
-              // no-op the browser reports no error for, so check first.
-              await assertClickable(page, located.x, located.y, step.description)
+              // no-op the browser reports no error for, so check first — but only
+              // when these are capture-time coordinates rather than an element's.
+              if (!located.foundByLocator) {
+                await assertClickable(page, located.x, located.y, step.description)
+              }
               await page.mouse.click(located.x, located.y)
               await page.waitForTimeout(100)
               await page.keyboard.type(value ?? '', { delay: 20 })
@@ -372,6 +392,22 @@ async function executeStep(
 
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err)
+
+      // Recoverable conditions the artifact declared — a known interstitial or
+      // dialog that legitimately appears at runtime. Clear it, then let the
+      // normal retry run, rather than treating it as a failure.
+      for (const rc of step.recoverableConditions ?? []) {
+        if (lastError.toLowerCase().includes(rc.pattern.toLowerCase())) {
+          if (rc.action === 'dismiss') {
+            try {
+              await page.keyboard.press('Escape')
+              await page.waitForTimeout(500)
+            } catch { /* best-effort — the retry is the real remedy */ }
+          }
+          break
+        }
+      }
+
       if (attempt < step.maxRetries) {
         console.warn(
           `[replay] step ${step.stepNumber} attempt ${attempt + 1} failed — retrying: ${lastError}`
@@ -430,6 +466,101 @@ async function executeStep(
   })
 
   if (!succeeded) {
+    // ── Stuck vs hard failure ──────────────────────────────────────────────
+    // "Stuck" means we could not find the control at all — a human looking at
+    // the page can usually resolve that, so it is worth pausing for one. A
+    // checkpoint that failed, or a blocked action, is a genuine failure and
+    // escalating would only waste the operator's time.
+    const isStuck = lastError.includes('Could not locate') || lastError.includes('boundingBox')
+
+    if (isStuck && mayEscalate) {
+      let beforeScreenshot: string | undefined
+      try {
+        beforeScreenshot = await captureScreenshot(page, runState.runId, step.stepNumber, 'before')
+      } catch { /* evidence is best-effort — never fail the run over a screenshot */ }
+
+      runState.status   = 'stuck'
+      runState.isPaused = true
+      runState.interventionRequest = {
+        runId:           runState.runId,
+        goalDescription: artifact.goal,
+        currentStep:     step.stepNumber,
+        whyStuck:        lastError,
+        screenshotPath:  beforeScreenshot,
+        artifactId:      runState.artifactId
+      }
+
+      console.log(`[replay] stuck at step ${step.stepNumber} — waiting for human handoff`)
+
+      let humanNotes = ''
+      try {
+        // Blocks until the operator signals they are done with the live session.
+        humanNotes = await waitForHandoff(runState.runId)
+      } catch (err) {
+        runState.status   = 'failed'
+        runState.isPaused = false
+        runState.interventionRequest = undefined
+        const observed = err instanceof Error ? err.message : String(err)
+        runState.log.error = {
+          step:     step.stepNumber,
+          expected: 'human handoff',
+          observed,
+          type:     'hard_failure'
+        }
+        return { status: 'failed', errorDetails: observed }
+      }
+
+      let afterScreenshot: string | undefined
+      try {
+        afterScreenshot = await captureScreenshot(page, runState.runId, step.stepNumber, 'after')
+      } catch { /* best-effort */ }
+
+      runState.status   = 'running'
+      runState.isPaused = false
+      runState.interventionRequest = undefined
+
+      // Record what the human was shown, what they did, and what changed.
+      runState.log.steps.push({
+        stepNumber:          step.stepNumber,
+        startTime,
+        endTime:             new Date().toISOString(),
+        retryCount:          step.maxRetries,
+        status:              'stuck',
+        elementStrategyUsed: strategyUsed,
+        sensitive:           step.sensitive,
+        screenshotPath:      step.sensitive ? undefined : beforeScreenshot,
+        afterScreenshotPath: step.sensitive ? undefined : afterScreenshot,
+        humanNotes:          humanNotes || undefined,
+        errorDetails:        step.sensitive ? '[redacted — sensitive step]' : lastError
+      })
+
+      console.log(
+        `[replay] human handoff complete — notes: "${humanNotes}" — retrying step ${step.stepNumber}`
+      )
+
+      // Re-run the step through the same path rather than a duplicated copy of
+      // it, with escalation disabled so a still-broken page fails instead of
+      // pausing again.
+      const retry = await executeStep(
+        page, step, artifact, ctx, inputs, insideLoop, runState, effectiveAllowWrites, false
+      )
+
+      if (retry.status === 'success') {
+        console.log(`[replay] step ${step.stepNumber} recovered after human handoff ✓`)
+        return retry
+      }
+
+      runState.status    = 'failed'
+      runState.log.error = {
+        step:     step.stepNumber,
+        expected: 'checkpoint after human handoff',
+        observed: retry.errorDetails ?? lastError,
+        type:     'hard_failure'
+      }
+      console.error(`[replay] step ${step.stepNumber} still failed after human handoff`)
+      return retry
+    }
+
     runState.status    = 'failed'
     runState.log.error = {
       step:     step.stepNumber,

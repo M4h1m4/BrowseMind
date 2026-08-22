@@ -1,7 +1,10 @@
 node_modules/
 dist/
 .env
-db/artifacts.db
+
+# Runtime database and run evidence — regenerated locally, not committed for now
+db/
+evidence/
 
 # Local planning notes, by name — a blanket *.md rule would also swallow
 # REPORT.md and KNOWN_LIMITATIONS.md, which belong in the repo.
@@ -10,7 +13,7 @@ pending_codereview.md
 phase1.md
 *.docx
 
-# OS and editor noise
+# macOS
 .DS_Store
 
 # Local runtime databases for the mock sites

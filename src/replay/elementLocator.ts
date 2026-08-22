@@ -6,6 +6,12 @@ export interface LocateResult {
   x: number
   y: number
   /**
+   * True when a named strategy matched a real element. False means every
+   * strategy failed and these are capture-time coordinates, which may point at
+   * nothing — callers must not act on them blindly.
+   */
+  foundByLocator: boolean
+  /**
    * Handle to the matched element. Absent only when every strategy failed and we
    * fell back to the coordinates recorded at capture time — callers should prefer
    * this over (x, y) whenever it is present, because it auto-waits and throws
@@ -23,18 +29,22 @@ export interface LocateResult {
  * `document.elementFromPoint()` returns null. Scrolling first guarantees the
  * coordinates we hand back are actually reachable.
  */
+/** Per-strategy budget. Without it a missing element costs Playwright's 30s default. */
+const LOCATE_TIMEOUT = 2000
+
 async function measure(
   locator: Locator, strategy: ElementStrategy
 ): Promise<LocateResult | null> {
   try {
     if (await locator.count() === 0) return null
-    await locator.scrollIntoViewIfNeeded({ timeout: 2000 })
-    const box = await locator.boundingBox()
+    await locator.scrollIntoViewIfNeeded({ timeout: LOCATE_TIMEOUT })
+    const box = await locator.boundingBox({ timeout: LOCATE_TIMEOUT })
     if (!box) return null
     return {
       strategy,
       x: box.x + box.width / 2,
       y: box.y + box.height / 2,
+      foundByLocator: true,
       locator
     }
   } catch {
@@ -72,7 +82,7 @@ export async function locateElement(page: Page, elementData: ElementData): Promi
   // screen now — bring them into reach before handing them back.
   const { x, y } = elementData.fallback.value
   const adjusted = await scrollCoordinatesIntoView(page, x, y)
-  return { strategy: 'fallback', x: adjusted.x, y: adjusted.y }
+  return { strategy: 'fallback', x: adjusted.x, y: adjusted.y, foundByLocator: false }
 }
 
 /**
