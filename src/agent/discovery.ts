@@ -13,6 +13,8 @@ import { waitForResume } from '../session/resumeSignal'
 import { captureAndStoreAuthState } from '../session/loginHandler'
 import { injectCursor, moveCursor, clickAnimation } from '../replay/cursorOverlay'
 import { extractFirstSampleGoal } from './sampleParser'
+import { classifyAction } from '../replay/guardrails'
+import { waitForHandoff } from '../session/handoffSignal'
 
 // Read at call time so tests can override via process.env
 function getMaxSteps(): number { return parseInt(process.env.MAX_STEPS_CAPTURE ?? '40') }
@@ -1590,6 +1592,50 @@ export async function runDiscovery(
       //    element data and prove the workflow works end-to-end.
       if (action.isMutating) {
         console.log(`[discovery] mutating action "${action.action}" on "${action.targetDescription}" — executing during capture`)
+      }
+
+      // ── 6a. Destructive action confirmation ────────────────────────────
+      const actionClass = classifyAction(action.action, action.targetDescription)
+      if (actionClass === 'destructive') {
+        state.status   = 'confirmation_required'
+        state.isPaused = true
+        state.interventionRequest = {
+          runId:           state.runId,
+          goalDescription: goal,
+          currentStep:     iteration,
+          whyStuck:        `Destructive action detected during capture: ${action.targetDescription}`,
+          screenshotPath:  undefined,
+          artifactId:      undefined
+        }
+
+        console.log(`[discovery] destructive action at iteration ${iteration} — waiting for human confirmation`)
+
+        let humanNotes = ''
+        try {
+          humanNotes = await waitForHandoff(state.runId)
+        } catch (err) {
+          state.status   = 'failed'
+          state.isPaused = false
+          state.interventionRequest = undefined
+          const observed = err instanceof Error ? err.message : String(err)
+          state.log.error = {
+            step:     iteration,
+            expected: 'human confirmation for destructive action during capture',
+            observed,
+            type:     'hard_failure'
+          }
+          console.log(`[discovery] destructive action cancelled by human at iteration ${iteration}`)
+          writeRunLog(state.log)
+          return
+        }
+
+        state.status   = 'running'
+        state.isPaused = false
+        state.interventionRequest = undefined
+
+        console.log(
+          `[discovery] destructive action approved by human — notes: "${humanNotes}" — proceeding with action`
+        )
       }
 
       // ── 7. Show cursor then execute action ─────────────────────────────

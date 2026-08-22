@@ -128,6 +128,15 @@ export function createMediTrackServer(dbPath?: string): { app: express.Express; 
     res.json({ ...row, name: `${row.firstName} ${row.lastName}`, conditions: row.conditions ? row.conditions.split(', ') : [], allergies: row.allergies ? row.allergies.split(', ') : [] })
   })
 
+  // DELETE /api/patients/:id — delete a patient (destructive)
+  mediApp.delete('/api/patients/:id', (req, res) => {
+    const row = db.prepare('SELECT * FROM patients WHERE id = ?').get(req.params.id) as any
+    if (!row) { res.status(404).json({ error: 'Patient not found' }); return }
+    
+    db.prepare('DELETE FROM patients WHERE id = ?').run(req.params.id)
+    res.json({ message: `Patient ${row.firstName} ${row.lastName} (${req.params.id}) deleted successfully` })
+  })
+
   // GET /api/stats — registry size and the ID the next registration will get.
   // The form reads this so its sidebar reflects the real database instead of a
   // number baked into the markup.
