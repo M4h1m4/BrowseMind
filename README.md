@@ -1,6 +1,24 @@
 # BrowseMind
 
-A computer-use automation system that records LLM-driven browser sessions as reusable capabilities and replays them deterministically against legacy web applications.
+A computer-use automation system that records LLM-driven browser sessions as reusable, deterministic capabilities and replays them against legacy web applications.
+
+## What It Does
+
+BrowseMind bridges the gap between AI agents and legacy web applications that lack APIs. It operates in two phases:
+
+**Capture (Discovery)** — Given a natural-language goal and a target URL, BrowseMind launches a real browser, observes the UI, and uses an LLM (GPT-4o-mini) to decide the next action (click, input, navigate, scroll, wait). Each action is executed, the resulting DOM state is captured, and stable element selectors (aria-label, placeholder, text content, coordinates as fallback) are extracted. The full session is saved as a typed, versioned **artifact** in SQLite — a reusable capability the agent can invoke on demand.
+
+**Replay (Production)** — The saved artifact is replayed deterministically without the LLM in the loop. Each step locates elements via ranked selector strategies (semantic → CSS → coordinates), executes the action, and verifies a checkpoint condition (element visible, URL contains, text present) before proceeding. This makes replay fast, cheap, and reliable — no LLM costs or variability in production.
+
+## Key Capabilities
+
+- **Multi-sample goals** — Capture once with one data record; replay automatically chains across multiple data records (e.g., "Add patient A, then B, then C")
+- **Human escalation** — When stuck (element not found, checkpoint failed) or on destructive actions (delete/remove), BrowseMind pauses, shows the live browser to a human operator, and resumes after manual intervention
+- **Destructive action guardrails** — Automatic detection of delete/remove/destroy actions; requires explicit human confirmation before execution
+- **Safety guardrails** — Domain allowlist, action classification (read/write/destructive), PII redaction in logs and artifacts
+- **Multi-tenant isolation** — Artifacts scoped by tenant; schema supports cross-tenant artifact inheritance (base artifact + overrides)
+
+---
 
 ## Quick Start (Docker - Recommended)
 
@@ -84,6 +102,17 @@ RUN_E2E=true npm run test:e2e  # Full e2e with real browser
 - Artifacts: `evidence/artifacts/<artifactId>.json`
 - Run logs: `evidence/runs/<runId>.json`
 - Screenshots: `evidence/screenshots/`
+
+---
+
+## Tech Stack
+
+- **Runtime** — Node.js, TypeScript, Express
+- **Browser automation** — Playwright (Chromium)
+- **LLM** — OpenAI GPT-4o-mini via function calling
+- **Database** — SQLite via better-sqlite3
+- **Tests** — Jest, Supertest
+- **Containerization** — Docker (multi-stage, ~259MB images)
 
 ---
 
