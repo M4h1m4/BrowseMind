@@ -1,9 +1,13 @@
+import fs from 'fs'
+import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { getDb } from '../db/client'
 import { Artifact } from '../types'
 
 export function saveArtifact(artifact: Artifact): void {
   const db = getDb()
+  const content = JSON.stringify(artifact)
+  
   db.prepare(`
     INSERT INTO artifacts (artifactId, tenantId, baseArtifactId, version, goal, targetApp, createdAt, content)
     VALUES (@artifactId, @tenantId, @baseArtifactId, @version, @goal, @targetApp, @createdAt, @content)
@@ -18,8 +22,14 @@ export function saveArtifact(artifact: Artifact): void {
     goal:           artifact.goal,
     targetApp:      artifact.targetApp,
     createdAt:      artifact.createdAt,
-    content:        JSON.stringify(artifact)
+    content
   })
+
+  const artifactsDir = path.join(process.cwd(), 'evidence', 'artifacts')
+  fs.mkdirSync(artifactsDir, { recursive: true })
+  const filePath = path.join(artifactsDir, `${artifact.artifactId}.json`)
+  fs.writeFileSync(filePath, JSON.stringify(artifact, null, 2))
+  console.log(`[artifact] saved to evidence/artifacts/${artifact.artifactId}.json`)
 }
 
 export function findArtifactById(artifactId: string, tenantId: string): Artifact | null {
