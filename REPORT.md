@@ -109,13 +109,14 @@ Resolution order: **primary → secondary → tertiary → fallback**. Replay tr
 - **Fixed viewport** (1280×720) for coordinate stability
 - **Deterministic delays** (`waitAfter`, `page.waitForTimeout`)
 
-### Error Taxonomy (3 Categories)
+### Error Taxonomy (4 Categories)
 
-| Category | Definition | Handling |
-|----------|------------|----------|
-| **Business Outcome** | Expected, valid result (e.g., "record not found", "insufficient funds") | Step succeeds; outcome recorded; caller decides |
-| **Recoverable Condition** | Known intermittent issue (modal, slow load, session expiry) | Auto-retry with configured action (`dismiss`, `re-login`, `retry`) |
-| **Hard Failure** | Unexpected error, unrecoverable, or max retries exhausted | Run fails; structured error logged; escalation triggered |
+| Category | Where Recorded | Visible In |
+|----------|----------------|------------|
+| **Business Outcome** | `knownOutcomes` in artifact step → logged in `RunStepLog` as `status: 'business_outcome'` | Run log JSON (`evidence/runs/<runId>.json`), evidence UI |
+| **Recoverable Condition** | `recoverableConditions` in step → triggers auto-retry with action (`dismiss`, `re-login`, `retry`) | Run log (`retryCount`, `errorDetails`), no special UI badge |
+| **Hard Failure** | `RunLog.error` with `type: 'hard_failure'` | Run log JSON, evidence UI shows red "Failed" banner |
+| **Stuck** | `RunLog` step with `status: 'stuck'` + `interventionRequest` | UI stuck banner + screenshot, evidence screenshots |
 
 ### Stuck Detection & Escalation
 - **Element not found** after all strategies + retries → `stuck`
@@ -145,11 +146,28 @@ This maps to:
 
 The artifact schema captures **what to do**, not **how the DOM looks**. The `elementData` 4-tier strategy is the abstraction seam.
 
-### Multi-Tenant Reuse
-- **Base artifact + per-tenant overrides**: `baseArtifactId` links tenant-specific artifacts to a shared base
-- **Per-tenant selectors**: `allowedDomains` + per-tenant selector overrides in artifact
-- **Parameterized routes**: Goal encoding (`/patient/{{patientId}}`) generalizes across tenants running same vendor product
-- **Schema supports it** (`baseArtifactId`, `allowedDomains`, `inputSchema` per tenant); routing not built (deferred per PRD)
+### Multi-Tenant Reuse (Schema Only — Runtime Deferred)
+
+| Feature | In Schema? | Implemented? |
+|---------|------------|--------------|
+| `tenantId` | ✅ | ✅ (per run, from auth) |
+| `baseArtifactId` | ✅ | ❌ (field exists, no resolution) |
+| `allowedDomains` | ✅ | ✅ (guardrail enforced) |
+| Per-tenant `allowedDomains` | ❌ | ❌ |
+| Per-tenant selector overrides | ❌ | ❌ |
+| Cross-tenant artifact inheritance | ❌ | ❌ |
+
+**What's implemented:**
+- `allowedDomains` guardrail works (prevents navigation outside allowed domains)
+- `tenantId` passed through API → stored in run/artifact → used as SQLite partition
+- `baseArtifactId` field exists but **never resolved** — no inheritance logic
+
+**Missing (deferred per PRD):**
+- Per-tenant artifact resolution (`baseArtifactId` → load base → merge overrides)
+- Per-tenant selector overrides in artifact
+- Tenant-aware API routing (currently single `default` tenant)
+
+The schema is forward-compatible; the routing/inheritance layer is the missing piece.
 
 ---
 
