@@ -358,6 +358,23 @@
       var lastName = document.getElementById('last-name').value.trim();
       var successAlert = document.getElementById('success-alert');
 
+      // ── Client-side SSN validation: exactly 4 digits ─────────────────
+      var ssnField = document.getElementById('ssn');
+      var ssn = ssnField.value.trim();
+      if (!/^\d{4}$/.test(ssn)) {
+        successAlert.className = 'alert alert-error';
+        successAlert.innerHTML = '❌ <strong>SSN must be exactly 4 digits.</strong> You entered "' + (ssn || '(empty)') + '". Please correct the SSN field.';
+        successAlert.style.display = 'flex';
+        successAlert.scrollIntoView({ behavior: 'smooth' });
+        ssnField.style.borderColor = '#dc2626';
+        ssnField.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.25)';
+        ssnField.focus();
+        return;
+      } else {
+        ssnField.style.borderColor = '';
+        ssnField.style.boxShadow = '';
+      }
+
       var payload = {
         firstName: firstName,
         lastName: lastName,
