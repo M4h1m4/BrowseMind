@@ -27,7 +27,7 @@ const itE2E   = RUN_E2E ? it : it.skip
 
 // ── Serve MediTrack mock website ─────────────────────────────────────────────
 
-const MEDITRACK_DIR = path.resolve(__dirname, '../../mockwebsites/meditrack')
+const MEDITRACK_DIR = path.resolve(__dirname, '../../mock-websites/meditrack')
 
 let server: http.Server
 let origin: string

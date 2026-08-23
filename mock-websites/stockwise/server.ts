@@ -15,7 +15,7 @@ import fs from 'fs'
 import Database from 'better-sqlite3'
 import http from 'http'
 
-const STOCKWISE_DIR = path.resolve(__dirname, '../../mockwebsites/stockwise')
+const STOCKWISE_DIR = path.resolve(__dirname)
 
 let db: Database.Database
 

@@ -10,7 +10,7 @@ import path from 'path'
 import Database from 'better-sqlite3'
 import http from 'http'
 
-const MEDITRACK_DIR = path.resolve(__dirname, '../../mockwebsites/meditrack')
+const MEDITRACK_DIR = path.resolve(__dirname)
 
 let db: Database.Database
 

@@ -6,7 +6,7 @@
  *   2. Replay phase  — replays the captured artifact against the same site
  *   3. Correctness   — validates the output file against the real MediTrack data
  *
- * Expected data is read dynamically from mockwebsites/meditrack/data.js —
+ * Expected data is read dynamically from mock-websites/meditrack/data.js —
  * nothing is hardcoded.
  *
  * Run: RUN_E2E=true npm run test:e2e -- --testPathPattern="fullCycle"
@@ -27,7 +27,7 @@ const itE2E   = RUN_E2E ? it : it.skip
 
 // ── Serve MediTrack mock website ─────────────────────────────────────────────
 
-const MEDITRACK_DIR = path.resolve(__dirname, '../../mockwebsites/meditrack')
+const MEDITRACK_DIR = path.resolve(__dirname, '../../mock-websites/meditrack')
 
 let server: http.Server
 let origin: string
