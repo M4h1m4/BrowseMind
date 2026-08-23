@@ -601,11 +601,15 @@ function renderStatus(data) {
       stopPolling()
       setBtnCapture(false)
       const errDetail = data.error ? `<pre>${escHtml(data.error.observed || JSON.stringify(data.error))}</pre>` : ''
+      // Report where the failure was recorded, not where the run happened to stop.
+      // currentStep keeps advancing when an enclosing step swallows a nested
+      // failure, so it can point at a step that ran fine.
+      const failedAt = data.error?.stepPath ?? data.error?.step ?? data.currentStep
       area.innerHTML = `
         <div class="status-banner banner-failed">
           <span class="icon">❌</span>
           <div>
-            <strong>Run failed at step ${data.currentStep}</strong>
+            <strong>Run failed at step ${escHtml(String(failedAt))}</strong>
             ${data.error?.expected ? `<div style="margin-top:4px;">Expected: ${escHtml(data.error.expected)}</div>` : ''}
           </div>
         </div>

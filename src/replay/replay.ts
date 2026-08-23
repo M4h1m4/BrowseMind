@@ -28,6 +28,34 @@ function artifactHasOutputStep(steps: Step[]): boolean {
   )
 }
 
+/**
+ * What the step was trying to achieve when it failed.
+ *
+ * Only checkpoint verification produces a "Checkpoint failed:" throw; every other
+ * error came out of executing the action itself (locating an element, reading
+ * text, navigating). Reporting the checkpoint for those is misleading — worse
+ * when the checkpoint is the unfilled `url-contains ""` placeholder the builder
+ * writes for steps whose checkpoint the LLM never supplied.
+ */
+function describeExpectation(step: Step, lastError: string): string {
+  if (lastError.startsWith('Checkpoint failed')) {
+    return `checkpoint: ${step.checkpoint.type} "${step.checkpoint.value}"`
+  }
+
+  switch (step.actionType) {
+    case 'extract':
+      return `extract "${step.variableName ?? '_extracted'}" from selector "${step.cssSelector ?? ''}"`
+    case 'loop':
+      return `iterate rows matching "${step.loopSelector ?? ''}"`
+    case 'output':
+      return `write ${step.outputFormat ?? 'json'} output to "${step.outputPath ?? 'output.json'}"`
+    case 'navigate':
+      return `navigate to "${step.value ?? step.description}"`
+    default:
+      return `${step.actionType} on "${step.description}"`
+  }
+}
+
 // ── Per-step execution (extracted so the loop step can call it recursively) ───
 async function executeStep(
   page: Page,
@@ -39,8 +67,19 @@ async function executeStep(
   runState: RunState,
   effectiveAllowWrites: boolean,
   /** False on the retry that follows a human handoff, so we escalate at most once. */
-  mayEscalate: boolean = true
+  mayEscalate: boolean = true,
+  /** Dotted path of the enclosing step, '' at the top level. See RunError.stepPath. */
+  pathPrefix: string = ''
 ): Promise<{ status: 'success' | 'failed'; errorDetails?: string }> {
+
+  // Identifies this step unambiguously in the log, across nesting levels.
+  const stepPath = pathPrefix ? `${pathPrefix}.${step.stepNumber}` : String(step.stepNumber)
+
+  // A nested step that fails writes runState.log.error before unwinding. If an
+  // enclosing step then retries and passes, that error is stale and must not
+  // outlive the attempt — otherwise the run carries a hard_failure it recovered
+  // from. Remembered here so a successful return can clear exactly that.
+  const errorBeforeStep = runState.log.error
 
   // ── Guardrail: action classification ───────────────────────────────────────
   const actionClass = classifyAction(step.actionType, step.description)
@@ -49,6 +88,7 @@ async function executeStep(
     runState.status    = 'failed'
     runState.log.error = {
       step:     step.stepNumber,
+      stepPath,
       expected: 'read-only action (allowWrites is false)',
       observed: `write action "${step.actionType}" on "${step.description}" blocked`,
       type:     'hard_failure'
@@ -94,6 +134,7 @@ async function executeStep(
       const observed = err instanceof Error ? err.message : String(err)
       runState.log.error = {
         step:     step.stepNumber,
+        stepPath,
         expected: 'human confirmation for destructive action',
         observed,
         type:     'hard_failure'
@@ -113,6 +154,7 @@ async function executeStep(
 
     runState.log.steps.push({
       stepNumber:          step.stepNumber,
+      stepPath,
       startTime,
       endTime:             new Date().toISOString(),
       retryCount:          0,
@@ -175,6 +217,18 @@ async function executeStep(
         }
         console.log(`[replay] loop: ${rows.length} data rows (filtered from ${allRows.length} total)`)
 
+        // A loop that matches nothing did no work, and must not pass as success.
+        // This is how a swallowed failure used to surface as a green run: an inner
+        // step threw, the retry re-entered the loop from the detail page the failed
+        // row had navigated to, the row selector matched zero elements there, and
+        // the step "succeeded" without touching a single row.
+        if (rows.length === 0) {
+          throw new Error(
+            `Loop matched no rows for "${step.loopSelector ?? ''}" on ${page.url()} — ` +
+            `expected at least one`
+          )
+        }
+
         // Record the URL we start on so we know when we've navigated away from it
         const loopOriginUrl = page.url().split('?')[0]
 
@@ -225,6 +279,7 @@ async function executeStep(
 
               runState.log.steps.push({
                 stepNumber:          innerStep.stepNumber,
+                stepPath:            `${stepPath}.${innerStep.stepNumber}`,
                 startTime:           new Date().toISOString(),
                 endTime:             new Date().toISOString(),
                 retryCount:          0,
@@ -234,7 +289,8 @@ async function executeStep(
               })
             } else {
               const result = await executeStep(
-                page, innerStep, artifact, ctx, inputs, true, runState, effectiveAllowWrites
+                page, innerStep, artifact, ctx, inputs, true, runState,
+                effectiveAllowWrites, true, stepPath
               )
               if (result.status === 'failed') {
                 ctx.vars.delete('loop.index')
@@ -515,6 +571,7 @@ async function executeStep(
 
   runState.log.steps.push({
     stepNumber:          step.stepNumber,
+    stepPath,
     startTime,
     endTime:             new Date().toISOString(),
     retryCount:          succeeded ? 0 : step.maxRetries,
@@ -566,6 +623,7 @@ async function executeStep(
         const observed = err instanceof Error ? err.message : String(err)
         runState.log.error = {
           step:     step.stepNumber,
+          stepPath,
           expected: 'human handoff',
           observed,
           type:     'hard_failure'
@@ -585,6 +643,7 @@ async function executeStep(
       // Record what the human was shown, what they did, and what changed.
       runState.log.steps.push({
         stepNumber:          step.stepNumber,
+        stepPath,
         startTime,
         endTime:             new Date().toISOString(),
         retryCount:          step.maxRetries,
@@ -605,7 +664,8 @@ async function executeStep(
       // it, with escalation disabled so a still-broken page fails instead of
       // pausing again.
       const retry = await executeStep(
-        page, step, artifact, ctx, inputs, insideLoop, runState, effectiveAllowWrites, false
+        page, step, artifact, ctx, inputs, insideLoop, runState,
+        effectiveAllowWrites, false, pathPrefix
       )
 
       if (retry.status === 'success') {
@@ -616,6 +676,7 @@ async function executeStep(
       runState.status    = 'failed'
       runState.log.error = {
         step:     step.stepNumber,
+        stepPath,
         expected: 'checkpoint after human handoff',
         observed: retry.errorDetails ?? lastError,
         type:     'hard_failure'
@@ -624,20 +685,38 @@ async function executeStep(
       return retry
     }
 
-    runState.status    = 'failed'
-    runState.log.error = {
-      step:     step.stepNumber,
-      expected: `checkpoint: ${step.checkpoint.type} "${step.checkpoint.value}"`,
-      observed: lastError,
-      type:     'hard_failure'
+    runState.status = 'failed'
+
+    // Keep the deepest failure. A nested step that already recorded one found the
+    // root cause; this level only sees the cascade (a loop reporting "no rows"
+    // tells the operator far less than the extract selector that actually broke).
+    if (!runState.log.error || runState.log.error === errorBeforeStep) {
+      runState.log.error = {
+        step:     step.stepNumber,
+        stepPath,
+        expected: describeExpectation(step, lastError),
+        observed: lastError,
+        type:     'hard_failure'
+      }
     }
     console.error(
-      `[replay] step ${step.stepNumber} failed after ${step.maxRetries} retries: ${lastError}`
+      `[replay] step ${stepPath} failed after ${step.maxRetries} retries: ${lastError}`
     )
     return { status: 'failed', errorDetails: lastError }
   }
 
-  console.log(`[replay] step ${step.stepNumber}: ${step.actionType} — "${step.description}" ✓`)
+  // This step passed. Any error recorded while it was running came from a nested
+  // step on an attempt this one went on to retry successfully — drop it, or the
+  // run finishes carrying a hard_failure it actually recovered from.
+  if (runState.log.error && runState.log.error !== errorBeforeStep) {
+    console.log(
+      `[replay] step ${stepPath} recovered — clearing error from ${runState.log.error.stepPath ?? runState.log.error.step}`
+    )
+    runState.log.error = errorBeforeStep
+    if (runState.status === 'failed') runState.status = 'running'
+  }
+
+  console.log(`[replay] step ${stepPath}: ${step.actionType} — "${step.description}" ✓`)
   return { status: 'success' }
 }
 
@@ -716,7 +795,8 @@ export async function runReplay(
       runState.currentStep = step.stepNumber
 
       const result = await executeStep(
-        page, step, artifact, ctx, inputs, false, runState, effectiveAllowWrites
+        page, step, artifact, ctx, inputs, false, runState,
+        effectiveAllowWrites, true, ''
       )
 
       if (result.status === 'failed') {
@@ -725,8 +805,20 @@ export async function runReplay(
       }
     }
 
-    runState.status = 'success'
-    console.log(`[replay] completed — ${artifact.steps.length} steps succeeded`)
+    if (runState.log.error) {
+      // Every step returned success, yet a hard failure is on record. That means
+      // an enclosing step swallowed a nested failure — most often a loop step
+      // whose retry matched zero rows and so "passed" without doing any work.
+      // Report the failure; a run that lost work is not a successful run.
+      runState.status = 'failed'
+      console.error(
+        `[replay] steps completed but a hard failure is recorded at step ` +
+        `${runState.log.error.stepPath ?? runState.log.error.step} — reporting failed`
+      )
+    } else {
+      runState.status = 'success'
+      console.log(`[replay] completed — ${artifact.steps.length} steps succeeded`)
+    }
 
   } catch (err) {
     const message      = err instanceof Error ? err.message : String(err)
@@ -740,6 +832,9 @@ export async function runReplay(
     console.error(`[replay] error at step ${runState.currentStep}: ${message}`)
 
   } finally {
+    if (runState.log.error && runState.status === 'success') {
+      runState.status = 'failed'
+    }
     runState.log.completedAt = new Date().toISOString()
     runState.log.status      = runState.status
     writeRunLog(runState.log)
