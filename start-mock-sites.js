@@ -1,6 +1,6 @@
 require('ts-node/register')
-const { createMediTrackServer } = require('./src/meditrack/server')
-const { createStockWiseServer } = require('./src/stockwise/server')
+const { createMediTrackServer } = require('./mock-websites/meditrack/server')
+const { createStockWiseServer } = require('./mock-websites/stockwise/server')
 const path = require('path')
 
 async function main() {
