@@ -307,6 +307,10 @@ let currentRunId     = null
 let pollHandle       = null
 // Polls spent waiting for the next queued record's run to appear.
 let chainWaitTicks   = 0
+// Which paused state is currently painted, as "<runId>:<status>". Paused branches
+// must keep polling to notice a resume, but must not repaint every 2s or they would
+// wipe whatever the operator is typing. See the paused branches in renderStatus.
+let pausedRendered   = null
 let artifactPollHandle = null
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -482,6 +486,7 @@ function renderStatus(data) {
 
   switch (data.status) {
     case 'running':
+      pausedRendered = null
       area.innerHTML = `
         <div class="status-banner banner-running">
           <div class="spinner"></div>
@@ -494,7 +499,9 @@ function renderStatus(data) {
       break
 
     case 'login_required':
-      stopPolling()
+      // Keep polling — see the 'stuck' branch for why stopping here froze the UI.
+      if (pausedRendered === currentRunId + ':login') break
+      pausedRendered = currentRunId + ':login'
       area.innerHTML = `
         <div class="status-banner banner-login">
           <span class="icon">🔐</span>
@@ -510,7 +517,14 @@ function renderStatus(data) {
       break
 
     case 'stuck':
-      stopPolling()
+      // Deliberately keep polling. This used to stopPolling(), which froze the UI
+      // on this banner forever: resumeRun starts polling before the resume POST
+      // lands, so that first poll still saw 'stuck' and cancelled the timer — the
+      // run then finished with nothing left watching it.
+      // Render once per stuck episode so the operator's typed notes survive the
+      // 2s poll instead of being wiped by a fresh innerHTML.
+      if (pausedRendered === currentRunId + ':stuck') break
+      pausedRendered = currentRunId + ':stuck'
       const ir  = data.interventionRequest || {}
       const img = ir.screenshotPath
         ? `<div class="screenshot-preview"><img src="/${ir.screenshotPath.replace(/^\//, '')}" alt="screenshot before stuck" /></div>`
@@ -520,7 +534,7 @@ function renderStatus(data) {
           <span class="icon">⚠️</span>
           <div>
             <strong>Stuck at step ${data.currentStep}</strong>
-            <div style="margin-top:4px;">${escHtml(ir.whyStuck || 'Element could not be located.')}</div>
+            <div style="margin-top:4px;">${escHtml(ir.whyStuck || 'Paused for human input — open the full log for details.')}</div>
           </div>
         </div>
         ${img}
@@ -533,7 +547,9 @@ function renderStatus(data) {
       break
 
     case 'confirmation_required':
-      stopPolling()
+      // Keep polling — see the 'stuck' branch for why stopping here froze the UI.
+      if (pausedRendered === currentRunId + ':confirm') break
+      pausedRendered = currentRunId + ':confirm'
       area.innerHTML = `
         <div class="status-banner banner-confirm">
           <span class="icon">🛑</span>
@@ -549,6 +565,7 @@ function renderStatus(data) {
       break
 
     case 'success':
+      pausedRendered = null
       // The next record's run is created just after this one reports success —
       // hold the poll open briefly rather than declaring the whole job done.
       if (data.pendingSamples > 0 && !data.chainedRunId) {
@@ -598,6 +615,7 @@ function renderStatus(data) {
       break
 
     case 'failed':
+      pausedRendered = null
       stopPolling()
       setBtnCapture(false)
       const errDetail = data.error ? `<pre>${escHtml(data.error.observed || JSON.stringify(data.error))}</pre>` : ''
@@ -629,7 +647,6 @@ function renderStatus(data) {
 async function resumeRun(notes) {
   if (!currentRunId) return
   renderStatus({ status: 'running', currentStep: '?' })
-  startPolling()
   try {
     await fetch(`/api/v1/runs/${currentRunId}/resume`, {
       method:  'POST',
@@ -637,6 +654,7 @@ async function resumeRun(notes) {
       body:    JSON.stringify({ humanNotes: notes || '' })
     })
   } catch { /* best-effort — polling will catch the real state */ }
+  startPolling()
 }
 
 function cancelRun() {

@@ -373,7 +373,11 @@ router.post('/runs/:runId/resume', (req: Request, res: Response) => {
     state.status   = 'running'
   }
 
-  state.interventionRequest = undefined
+  // Only the plain-pause branch clears this here. The replay and discovery loops
+  // clear their own once they actually wake, and clearing it early opened a window
+  // where a poll saw status 'stuck' with no interventionRequest — which the UI
+  // rendered as a generic "element could not be located" instead of the real reason.
+  if (!state.isPaused) state.interventionRequest = undefined
   console.log(`[handoff] run ${state.runId} resumed — notes: "${humanNotes ?? ''}"`)
   res.json({ status: 'resumed', resumedAt: new Date().toISOString() })
 })
