@@ -15,7 +15,7 @@ import fs from 'fs'
 import Database from 'better-sqlite3'
 import http from 'http'
 
-const STOCKWISE_DIR = path.resolve(__dirname)
+const STOCKWISE_DIR = path.resolve(__dirname, '../../mock-websites/stockwise')
 
 let db: Database.Database
 
@@ -190,9 +190,9 @@ export function createStockWiseServer(dbPath?: string): {
     app: stockApp,
     start: (port?: number) => {
       return new Promise((resolve, reject) => {
-        const server = stockApp.listen(port ?? 0, '127.0.0.1', () => {
+        const server = stockApp.listen(port ?? 0, '0.0.0.0', () => {
           const addr = server.address() as { port: number }
-          const origin = `http://127.0.0.1:${addr.port}`
+          const origin = `http://0.0.0.0:${addr.port}`
           console.log(`[stockwise] server running on ${origin}`)
           resolve({ server, origin })
         })

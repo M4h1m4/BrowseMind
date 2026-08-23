@@ -10,7 +10,7 @@ import path from 'path'
 import Database from 'better-sqlite3'
 import http from 'http'
 
-const MEDITRACK_DIR = path.resolve(__dirname)
+const MEDITRACK_DIR = path.resolve(__dirname, '../../mock-websites/meditrack')
 
 let db: Database.Database
 
@@ -152,9 +152,9 @@ export function createMediTrackServer(dbPath?: string): { app: express.Express; 
     app: mediApp,
     start: (port?: number) => {
       return new Promise((resolve, reject) => {
-        const server = mediApp.listen(port ?? 0, '127.0.0.1', () => {
+        const server = mediApp.listen(port ?? 0, '0.0.0.0', () => {
           const addr = server.address() as { port: number }
-          const origin = `http://127.0.0.1:${addr.port}`
+          const origin = `http://0.0.0.0:${addr.port}`
           console.log(`[meditrack] server running on ${origin}`)
           resolve({ server, origin })
         })

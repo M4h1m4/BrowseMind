@@ -38,8 +38,8 @@ services:
       - NODE_ENV=production
       - PORT=4300
     volumes:
-      # Persist MediTrack DB
-      - ./db/meditrack.db:/app/meditrack.db
+      # Persist MediTrack DB directory
+      - ./db:/app/db
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4300/"]
       interval: 10s
@@ -57,8 +57,8 @@ services:
       - NODE_ENV=production
       - PORT=4301
     volumes:
-      # Persist StockWise DB
-      - ./db/stockwise.db:/app/stockwise.db
+      # Persist StockWise DB directory
+      - ./db:/app/db
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4301/"]
       interval: 10s
