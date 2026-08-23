@@ -16,7 +16,7 @@ import { setupTestDb, teardownTestDb } from '../helpers/db'
 import { runDiscovery } from '../../src/agent/discovery'
 import { runReplay } from '../../src/replay/replay'
 import { findArtifactById } from '../../src/artifact/repository'
-import { createMediTrackServer, closeMediTrackDb } from '../../src/meditrack/server'
+import { createMediTrackServer, closeMediTrackDb } from '../../mock-websites/meditrack/server'
 import { RunState, Step } from '../../src/types'
 
 const RUN_E2E = process.env.RUN_E2E === 'true'

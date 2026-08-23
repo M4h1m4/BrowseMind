@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# ---- Build (needs dev deps for tsc) ----
+# ---- Build main app ----
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -26,18 +26,22 @@ CMD ["node", "dist/server.js"]
 FROM node:20-alpine AS meditrack
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY mock-websites/meditrack ./mock-websites/meditrack
+COPY mockwebsites/meditrack ./mockwebsites/meditrack
+COPY package*.json ./
+RUN npm ci --omit=dev
 EXPOSE 4300
-CMD ["node", "dist/meditrack/server.js"]
+CMD ["npx", "ts-node", "mock-websites/meditrack/server.ts"]
 
 # ---- Runtime: stockwise ----
 FROM node:20-alpine AS stockwise
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY mock-websites/stockwise ./mock-websites/stockwise
+COPY mockwebsites/stockwise ./mockwebsites/stockwise
+COPY package*.json ./
+RUN npm ci --omit=dev
 EXPOSE 4301
-CMD ["node", "dist/stockwise/server.js"]
+CMD ["npx", "ts-node", "mock-websites/stockwise/server.ts"]
