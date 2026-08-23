@@ -28,7 +28,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY mock-websites/meditrack ./mock-websites/meditrack
-COPY mockwebsites/meditrack ./mockwebsites/meditrack
 COPY package*.json ./
 RUN npm ci --omit=dev
 EXPOSE 4300
@@ -40,7 +39,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY mock-websites/stockwise ./mock-websites/stockwise
-COPY mockwebsites/stockwise ./mockwebsites/stockwise
 COPY package*.json ./
 RUN npm ci --omit=dev
 EXPOSE 4301
