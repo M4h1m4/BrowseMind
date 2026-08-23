@@ -1,4 +1,21 @@
-version: '3.8'
+# All three services share ONE network namespace.
+#
+# The browser that drives a run lives inside the browsemind container, so a target
+# URL is resolved from there — not from your host. With a namespace per service,
+# "http://localhost:4300" reaches browsemind's own empty loopback and the run dies
+# at step 0 with ERR_CONNECTION_REFUSED; publishing 4300 to the host does nothing
+# for container-to-container traffic.
+#
+# network_mode: "service:browsemind" puts the mock sites in browsemind's namespace,
+# which makes localhost:4300 and localhost:4301 literally correct inside it. That
+# matters beyond convenience: artifacts already recorded in evidence/ store
+# "http://localhost:4300" as targetApp and replay dials that stored value, so the
+# alternative (addressing the sites by Compose service name) would invalidate them.
+#
+# Consequences of a shared namespace:
+#   - Only browsemind may declare ports; every published port lives on it.
+#   - The mock sites depend on browsemind, since its namespace must exist first.
+#     BrowseMind reaches them lazily, when a run starts, so this ordering is fine.
 
 services:
   browsemind:
@@ -8,7 +25,9 @@ services:
       target: browsemind
     ports:
       - "3000:3000"  # BrowseMind UI
-      - "6080:6080"  # noVNC - View browser in web browser
+      - "6080:6080"  # noVNC — watch the live browser here, not on your desktop
+      - "4300:4300"  # MediTrack  (runs in the shared namespace)
+      - "4301:4301"  # StockWise  (runs in the shared namespace)
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -18,9 +37,6 @@ services:
       # Persist evidence, artifacts, DB
       - ./evidence:/app/evidence
       - ./db:/app/db
-    depends_on:
-      - meditrack
-      - stockwise
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
       interval: 10s
@@ -28,18 +44,29 @@ services:
       retries: 5
 
   meditrack:
-    image: m4h1m4/mediatrack:latest
+    image: m4h1m4/meditrack:latest
     build:
       context: .
       target: meditrack
-    ports:
-      - "4300:4300"
+    network_mode: "service:browsemind"
     environment:
       - NODE_ENV=production
       - PORT=4300
+      # Write the SQLite file into the mounted volume, not the container's own
+      # filesystem. Without this the server falls back to ./meditrack.db relative to
+      # its working directory, which no volume covers — so every `down` discarded
+      # the data the mount below claims to persist.
+      - DB_PATH=/app/db/meditrack.db
+      # Bind dual-stack. "0.0.0.0" is IPv4-only, and /etc/hosts maps localhost to
+      # ::1 first — so a target URL of http://localhost:PORT would be refused even
+      # inside the shared namespace. "::" accepts IPv6 and IPv4 both.
+      - "BIND_HOST=::"
     volumes:
       # Persist MediTrack DB directory
       - ./db:/app/db
+    depends_on:
+      browsemind:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4300/"]
       interval: 10s
@@ -51,14 +78,25 @@ services:
     build:
       context: .
       target: stockwise
-    ports:
-      - "4301:4301"
+    network_mode: "service:browsemind"
     environment:
       - NODE_ENV=production
       - PORT=4301
+      # Write the SQLite file into the mounted volume, not the container's own
+      # filesystem. Without this the server falls back to ./stockwise.db relative to
+      # its working directory, which no volume covers — so every `down` discarded
+      # the data the mount below claims to persist.
+      - DB_PATH=/app/db/stockwise.db
+      # Bind dual-stack. "0.0.0.0" is IPv4-only, and /etc/hosts maps localhost to
+      # ::1 first — so a target URL of http://localhost:PORT would be refused even
+      # inside the shared namespace. "::" accepts IPv6 and IPv4 both.
+      - "BIND_HOST=::"
     volumes:
       # Persist StockWise DB directory
       - ./db:/app/db
+    depends_on:
+      browsemind:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4301/"]
       interval: 10s

@@ -23,6 +23,7 @@ COPY --from=builder /app/package.json ./package.json
 RUN apk add --no-cache \
     chromium \
     nss \
+    bash \
     freetype \
     freetype-dev \
     harfbuzz \
@@ -84,6 +85,13 @@ COPY mock-websites/meditrack ./mock-websites/meditrack
 COPY package*.json ./
 RUN npm install -g typescript @types/node
 RUN tsc mock-websites/meditrack/server.ts --target ES2020 --module commonjs --esModuleInterop --skipLibCheck --strict false --types node --outDir ./dist/meditrack
+# Dual-stack: localhost resolves to ::1 first, so IPv4-only would be refused.
+ENV BIND_HOST=::
+# Keep the SQLite file in /app/db so a mounted volume actually captures it.
+# mkdir matters for a bare `docker run` with no mount — better-sqlite3 will not
+# create a missing parent directory.
+RUN mkdir -p /app/db
+ENV DB_PATH=/app/db/meditrack.db
 EXPOSE 4300
 CMD ["node", "dist/meditrack/server.js"]
 
@@ -96,5 +104,12 @@ COPY mock-websites/stockwise ./mock-websites/stockwise
 COPY package*.json ./
 RUN npm install -g typescript @types/node
 RUN tsc mock-websites/stockwise/server.ts --target ES2020 --module commonjs --esModuleInterop --skipLibCheck --strict false --types node --outDir ./dist/stockwise
+# Dual-stack: localhost resolves to ::1 first, so IPv4-only would be refused.
+ENV BIND_HOST=::
+# Keep the SQLite file in /app/db so a mounted volume actually captures it.
+# mkdir matters for a bare `docker run` with no mount — better-sqlite3 will not
+# create a missing parent directory.
+RUN mkdir -p /app/db
+ENV DB_PATH=/app/db/stockwise.db
 EXPOSE 4301
 CMD ["node", "dist/stockwise/server.js"]
