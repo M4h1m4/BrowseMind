@@ -1176,6 +1176,8 @@ async function executeLoopCapture(
   const selector = loopAction.loopSelector ?? ''
   if (!selector) return
 
+  // Same guard as countMatches: an unusable selector must not throw out of here.
+  if (await countMatches(page, selector) === 0) return
   const allRows = await page.locator(selector).all()
   if (allRows.length === 0) return
 
@@ -1190,6 +1192,7 @@ async function executeLoopCapture(
     const tbodySelector = selector.replace(/\s+tr$/, ' tbody tr').replace(/^(#[\w-]+)\s+tr$/, '$1 tbody tr')
     console.log(`[discovery] all rows were headers — retrying with: ${tbodySelector}`)
     loopAction.loopSelector = tbodySelector
+    if (await countMatches(page, tbodySelector) === 0) return
     const tbodyRows = await page.locator(tbodySelector).all()
     if (tbodyRows.length === 0) return
     tbodyRows.forEach(r => dataRows.push(r))
@@ -1402,6 +1405,27 @@ async function executeLoopCapture(
       await page.waitForTimeout(800)
       await injectCursor(page)
     }
+  }
+}
+
+/**
+ * How many elements a selector matches, treating an unusable selector as none.
+ *
+ * The LLM writes these, and it sometimes writes jQuery rather than CSS —
+ * `td:contains("View")` is the recurring one. querySelectorAll rejects that
+ * outright, so locator.count() throws a SyntaxError instead of returning 0, and
+ * the throw used to escape and kill the whole capture. Returning 0 instead routes
+ * an invalid selector into the same recovery the "matched nothing" case already
+ * uses: enumerate what is really on the page and correct the guess.
+ */
+async function countMatches(page: Page, selector: string): Promise<number> {
+  if (!selector) return 0
+  try {
+    return await page.locator(selector).count()
+  } catch (err) {
+    const message = err instanceof Error ? err.message.split('\n')[0] : String(err)
+    console.warn(`[discovery] unusable selector ${JSON.stringify(selector)} — ${message}`)
+    return 0
   }
 }
 
@@ -1649,7 +1673,7 @@ export async function runDiscovery(
           // ── Validate loopSelector on the live page ──────────────────────────
           // If the LLM guessed a selector that matches 0 elements, find the real one
           const guessedSel = action.loopSelector ?? ''
-          const matchCount = guessedSel ? await page.locator(guessedSel).count() : 0
+          const matchCount = await countMatches(page, guessedSel)
           if (matchCount === 0) {
             console.log(`[discovery] loopSelector "${guessedSel}" matched 0 elements — enumerating tables from DOM`)
 
