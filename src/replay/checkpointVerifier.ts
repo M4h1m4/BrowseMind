@@ -24,7 +24,12 @@ export async function verifyCheckpoint(page: Page, checkpoint: Checkpoint): Prom
       return page.url().includes(checkpoint.value)
 
     case 'text-present':
-      return page.locator(`text=${checkpoint.value}`).isVisible().catch(() => false)
+      // .first() for the same reason as element-visible below: isVisible() is a
+      // strict-mode call and throws when the locator resolves to more than one
+      // element. The throw was swallowed by the catch and reported as a failed
+      // checkpoint, so any text appearing twice on a page — a heading echoed in
+      // the topbar, say — failed every single replay.
+      return page.locator(`text=${checkpoint.value}`).first().isVisible().catch(() => false)
 
     case 'element-visible':
       // Use count() > 0 instead of isVisible() — isVisible() fails on
