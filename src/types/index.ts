@@ -91,14 +91,23 @@ export interface Artifact {
 // ─── Run Log ──────────────────────────────────────────────────────────────────
 
 export interface RunError {
-  step:     number
-  expected: string
-  observed: string
-  type:     'hard_failure' | 'stuck'
+  step:      number
+  /**
+   * Dotted path identifying the step across nesting levels, e.g. "1.3" for the
+   * third inner step of loop step 1. `step` alone is ambiguous: inner steps
+   * number from 1 independently of their parent, so two different steps in one
+   * run can both report `step: 3`.
+   */
+  stepPath?: string
+  expected:  string
+  observed:  string
+  type:      'hard_failure' | 'stuck'
 }
 
 export interface RunStepLog {
   stepNumber:           number
+  /** Dotted path across nesting levels — see RunError.stepPath. */
+  stepPath?:            string
   startTime:            string
   endTime:              string
   retryCount:           number

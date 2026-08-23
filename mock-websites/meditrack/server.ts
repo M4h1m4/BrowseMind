@@ -12,6 +12,27 @@ import http from 'http'
 
 const MEDITRACK_DIR = path.resolve(__dirname, '../../mock-websites/meditrack')
 
+/**
+ * Interface to bind the listener to.
+ *
+ * Defaults to loopback so a mock EHR on a laptop is not reachable from the rest
+ * of the network. Containers set BIND_HOST=0.0.0.0, because a listener bound to
+ * the container's loopback cannot be reached from outside it.
+ */
+const BIND_HOST = process.env.BIND_HOST || '127.0.0.1'
+
+/**
+ * An address a client can actually connect to.
+ *
+ * 0.0.0.0 and :: mean "every interface" to bind(); they are not destinations, so
+ * they must never be handed back as an origin. Callers use this string as the
+ * targetApp, and it gets recorded into artifacts.
+ */
+function connectableOrigin(host: string, port: number): string {
+  const reachable = host === '0.0.0.0' || host === '::' || host === '' ? '127.0.0.1' : host
+  return `http://${reachable}:${port}`
+}
+
 let db: Database.Database
 
 function initMediTrackDb(dbPath: string): void {
@@ -152,9 +173,9 @@ export function createMediTrackServer(dbPath?: string): { app: express.Express; 
     app: mediApp,
     start: (port?: number) => {
       return new Promise((resolve, reject) => {
-        const server = mediApp.listen(port ?? 0, '0.0.0.0', () => {
+        const server = mediApp.listen(port ?? 0, BIND_HOST, () => {
           const addr = server.address() as { port: number }
-          const origin = `http://0.0.0.0:${addr.port}`
+          const origin = connectableOrigin(BIND_HOST, addr.port)
           console.log(`[meditrack] server running on ${origin}`)
           resolve({ server, origin })
         })

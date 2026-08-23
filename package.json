@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc && cp src/ui/index.html dist/ui/index.html",
     "dev": "nodemon",
+    "mocks": "node start-mock-sites.js",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "jest",
