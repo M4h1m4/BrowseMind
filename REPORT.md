@@ -1,5 +1,48 @@
 # BrowseMind — Design Report
 
+## Running this
+
+Everything runs in Docker — the agent plus the two mock web apps it automates. No
+Node install, no live third-party services.
+
+```bash
+git clone https://github.com/M4h1m4/BrowseMind.git
+cd BrowseMind
+cp .env.example .env          # then edit .env → OPENAI_API_KEY=sk-your-key
+docker compose pull
+docker compose up -d
+```
+
+Then open **two** tabs:
+
+**The UI** — start runs here, and take over here when one pauses:
+
+```
+http://localhost:3000
+```
+
+**The live browser** — watch the agent work here:
+
+```
+http://localhost:6080/vnc.html?resize=scale
+```
+
+Open the second **before** starting a run. Capture and replay drive a **visible**
+Chromium (`headless: false`) on purpose: human escalation means an operator takes
+control of the live session, which needs a real browser to act in. In the container
+that browser renders to a virtual display streamed over noVNC, so this URL is both
+where you watch a run and where you type during a handoff. The `?resize=scale`
+scales the remote screen to fit your window rather than cropping it.
+
+The mock applications it automates, if you want to inspect them directly:
+`http://localhost:4300` (MediTrack, a mock EHR) and `http://localhost:4301`
+(StockWise, a mock inventory system).
+
+`README.md` carries worked goals for extraction, form submission, and a
+deliberately-failing record that triggers the escalation path end to end.
+
+---
+
 ## 1. Architecture
 
 ### Overview
@@ -184,12 +227,14 @@ The schema is forward-compatible; the routing/inheritance layer is the missing p
 1. **Automation pauses** → sets `status = 'stuck'` / `confirmation_required`
 2. **InterventionRequest** created with: runId, goal, step, whyStuck, screenshot, artifactId
 3. **UI renders** stuck/confirmation banner with screenshot + notes textarea
-4. **Human acts** in the **same live browser session** (headed Playwright)
+4. **Human acts** in the **same live browser session** (headed Playwright) — on the
+   desktop when run locally, through noVNC at `:6080` when containerised
 5. **Human clicks Resume** → `signalHandoff(runId, notes)` resolves `waitForHandoff`
 6. **Automation resumes** → retries the stuck step → continues
 
 ### Control Transfer Model
-- **Same live session** — not a fresh browser
+- **Same live session** — not a fresh browser; the run parks in `waitForHandoff`
+  with the page exactly as the agent left it
 - **Preserved context** — cookies, localStorage, auth state, current page
 - **Evidence preserved** — before/after screenshots + humanNotes logged
 - **No co-browsing** — minimal mock operator UI (PRD scope); real handoff mechanism is real
