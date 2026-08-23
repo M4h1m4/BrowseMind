@@ -49,7 +49,14 @@ logfile=/var/log/supervisor/supervisord.log
 pidfile=/var/run/supervisord.pid
 
 [program:xvfb]
-command=Xvfb :99 -screen 0 1280x720x24
+# Screen, not viewport. Chromium adds ~85px of tab strip and address bar on top
+# of the 1280x720 viewport the agent pins in code, so the window is ~1288x805 —
+# taller than a 720px screen. The bottom strip was never rendered into the
+# framebuffer, so noVNC could not show it at any zoom, and the submit button at
+# the foot of a long form was permanently invisible to a watching operator.
+# Enlarging the screen leaves the viewport, screenshots, and the LLM's 1280x720
+# coordinate space untouched.
+command=Xvfb :99 -screen 0 1440x1000x24
 autorestart=true
 stdout_logfile=/var/log/supervisor/xvfb.log
 stderr_logfile=/var/log/supervisor/xvfb_err.log
