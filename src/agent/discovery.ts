@@ -1417,7 +1417,8 @@ export async function runDiscovery(
   let browser: Browser | null = null
 
   try {
-    browser = await chromium.launch({ headless: false })
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+    browser = await chromium.launch({ headless: false, executablePath })
     const context  = await browser.newContext()
     const page     = await context.newPage()
 

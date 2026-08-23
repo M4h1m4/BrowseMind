@@ -167,3 +167,13 @@ export function createMediTrackServer(dbPath?: string): { app: express.Express; 
 export function closeMediTrackDb(): void {
   if (db) db.close()
 }
+
+// Start the server when run directly (not imported as a module)
+if (require.main === module) {
+  const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'meditrack.db')
+  const { start } = createMediTrackServer(dbPath)
+  start(4300).catch(err => {
+    console.error('[meditrack] failed to start:', err)
+    process.exit(1)
+  })
+}

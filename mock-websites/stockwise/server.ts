@@ -205,3 +205,13 @@ export function createStockWiseServer(dbPath?: string): {
 export function closeStockWiseDb(): void {
   if (db) db.close()
 }
+
+// Start the server when run directly (not imported as a module)
+if (require.main === module) {
+  const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'stockwise.db')
+  const { start } = createStockWiseServer(dbPath)
+  start(4301).catch(err => {
+    console.error('[stockwise] failed to start:', err)
+    process.exit(1)
+  })
+}
