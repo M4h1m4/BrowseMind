@@ -1,6 +1,17 @@
 import { runReplay } from '../../../src/replay/replay'
 import { RunState, Artifact } from '../../../src/types'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
+import { cancelHandoff, resetHandoffs } from '../../../src/session/handoffSignal'
+
+/** Poll until a paused run reaches the state under test, or give up. */
+async function waitForStatus(state: RunState, status: string, timeoutMs = 4000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (state.status === status) return
+    await new Promise(r => setTimeout(r, 20))
+  }
+  throw new Error(`run never reached "${status}" — stayed at "${state.status}"`)
+}
 
 // ─── Mock Playwright ──────────────────────────────────────────────────────────
 
@@ -99,6 +110,8 @@ beforeEach(() => {
 
 afterEach(() => {
   teardownTestDb()
+  // Module-level handoff state, and run ids repeat between tests.
+  resetHandoffs()
 })
 
 describe('Guardrails — allowWrites enforcement', () => {
@@ -149,10 +162,16 @@ describe('Guardrails — destructive action escalation', () => {
       steps: [makeStep({ description: 'Click Delete employee button' })]
     })
     const state = makeRunState()
-    await runReplay(state, artifact, {})
+    // Not awaited: a destructive step parks in waitForHandoff until a human answers,
+    // which is the behaviour under test. Awaiting it here could never return.
+    const run = runReplay(state, artifact, {})
+    await waitForStatus(state, 'confirmation_required')
 
     expect(state.status).toBe('confirmation_required')
     expect(state.isPaused).toBe(true)
+
+    cancelHandoff(state.runId)   // release the run so the promise settles
+    await run
   })
 
   it('stops replay at the destructive step without executing it', async () => {
@@ -163,9 +182,14 @@ describe('Guardrails — destructive action escalation', () => {
       steps: [makeStep({ description: 'Click Delete employee button' })]
     })
     const state = makeRunState()
-    await runReplay(state, artifact, {})
+    const run = runReplay(state, artifact, {})
+    await waitForStatus(state, 'confirmation_required')
 
+    // Paused for approval, so the destructive click must not have happened yet.
     expect(mockPage.mouse.click).not.toHaveBeenCalled()
+
+    cancelHandoff(state.runId)
+    await run
   })
 })
 

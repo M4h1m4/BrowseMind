@@ -1,4 +1,5 @@
 import { runReplay } from '../../../src/replay/replay'
+import { cancelHandoff, resetHandoffs } from '../../../src/session/handoffSignal'
 import { RunState, Artifact } from '../../../src/types'
 import { setupTestDb, teardownTestDb } from '../../helpers/db'
 
@@ -118,6 +119,9 @@ beforeEach(() => {
 
 afterEach(() => {
   teardownTestDb()
+  // Handoff state is module-level and run ids repeat across tests, so a
+  // cancellation a run never consumed would otherwise leak into the next one.
+  resetHandoffs()
 })
 
 describe('runReplay', () => {
@@ -159,10 +163,19 @@ describe('runReplay', () => {
     mockPage.url.mockReturnValue('https://example.com/wrong-page')
 
     const state = makeRunState()
+    // Checkpoint failures escalate for a human (see c26abd2), so runReplay parks in
+    // waitForHandoff and never settles under test. Cancelling up front is consumed
+    // the moment the run asks, which is the "no operator available" path — the run
+    // fails outright, which is the terminal outcome this test is about.
+    cancelHandoff(state.runId)
     await runReplay(state, makeArtifact(), {})
 
     expect(state.status).toBe('failed')
-    expect(state.log.error?.observed).toContain('Checkpoint failed')
+    // The run-level error is the handoff cancellation, because that is what ended
+    // the run. The checkpoint failure that caused the escalation is recorded on the
+    // step, which is what this test is really about.
+    const failedStep = state.log.steps.find(st => st.status === 'failed')
+    expect(failedStep?.errorDetails).toContain('Checkpoint failed')
   })
 
   it('sets status to failed and records error when an exception is thrown', async () => {
@@ -178,6 +191,11 @@ describe('runReplay', () => {
 
   it('writes the run log on completion regardless of outcome', async () => {
     const state = makeRunState()
+    // Checkpoint failures escalate for a human (see c26abd2), so runReplay parks in
+    // waitForHandoff and never settles under test. Cancelling up front is consumed
+    // the moment the run asks, which is the "no operator available" path — the run
+    // fails outright, which is the terminal outcome this test is about.
+    cancelHandoff(state.runId)
     await runReplay(state, makeArtifact(), {})
     expect(writeRunLog).toHaveBeenCalledWith(expect.objectContaining({ runId: 'replay-run-001' }))
   })
@@ -233,6 +251,10 @@ describe('runReplay', () => {
     const mockPage = await chromium.launch().then((b: any) => b.newContext().then((c: any) => c.newPage()))
 
     const state = makeRunState()
+    // The mock page reports /dashboard, so this navigate's checkpoint fails and the
+    // step escalates rather than ending the run. Cancelling up front stands in for
+    // "no operator available", so the assertion below is reachable.
+    cancelHandoff(state.runId)
     await runReplay(state, artifact, {})
 
     expect(mockPage.goto).toHaveBeenCalledWith('https://example.com/employees', expect.any(Object))
