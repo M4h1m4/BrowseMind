@@ -1,0 +1,533 @@
+{
+  "artifactId": "0ce685a4-191f-434e-b7e2-e2139a23cd62",
+  "tenantId": "default",
+  "version": 1,
+  "goal": "Go to the patients tab, click the add new patient button and add these patients and click Register Patient button to submit.\n\n  1) First Name: \"William\", Last Name: \"Carter\", Date of Birth: \"1983-06-14\", Gender: \"Male\", SSN (last 4): \"4821\", Phone Number: \"(617) 555-3201\", Home Address: \"45 Beacon Street, Boston, MA 02108\", Emergency\n  Contact Name: \"Sarah Carter\", Emergency Contact Phone: \"(617) 555-3202\", Insurance Provider: \"Cigna\".\n\n  2) First Name: \"Elena\", Last Name: \"Vasquez\", Date of Birth: \"1975-11-28\", Gender: \"Female\", SSN (last 4): \"79\", Phone Number: \"(312) 555-8470\", Home Address: \"220 Michigan Avenue, Chicago, IL 60601\", Emergency\n  Contact Name: \"Marco Vasquez\", Emergency Contact Phone: \"(312) 555-8471\", Insurance Provider: \"BlueCross BlueShield\".",
+  "targetApp": "http://localhost:4300",
+  "allowedDomains": [
+    "http://localhost:4300"
+  ],
+  "createdAt": "2026-08-23T20:58:28.212Z",
+  "allowWrites": true,
+  "inputSchema": {
+    "firstName": {
+      "type": "string",
+      "default": "William",
+      "sensitive": false
+    },
+    "lastName": {
+      "type": "string",
+      "default": "Carter",
+      "sensitive": false
+    },
+    "dateOfBirth": {
+      "type": "string",
+      "default": "1983-06-14",
+      "sensitive": false
+    },
+    "gender": {
+      "type": "string",
+      "default": "Male",
+      "sensitive": false
+    },
+    "ssnLast4": {
+      "type": "string",
+      "default": "4821",
+      "sensitive": true
+    },
+    "phoneNumber": {
+      "type": "string",
+      "default": "(617) 555-3201",
+      "sensitive": false
+    },
+    "homeAddress": {
+      "type": "string",
+      "default": "45 Beacon Street, Boston, MA 02108",
+      "sensitive": false
+    },
+    "emergencyContactName": {
+      "type": "string",
+      "default": "Sarah Carter",
+      "sensitive": false
+    },
+    "emergencyContactPhone": {
+      "type": "string",
+      "default": "(617) 555-3202",
+      "sensitive": false
+    },
+    "insuranceProvider": {
+      "type": "string",
+      "default": "Cigna",
+      "sensitive": false
+    }
+  },
+  "outputSchema": {},
+  "steps": [
+    {
+      "stepNumber": 1,
+      "actionType": "click",
+      "description": "\"👥 Patients\" tab",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": ""
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": "👥 Patients"
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 115,
+            "y": 133
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patients.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 2,
+      "actionType": "click",
+      "description": "\"+ Add New Patient\" button",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": ""
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": "+ Add New Patient"
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 1184,
+            "y": 130
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 3,
+      "actionType": "input",
+      "description": "First Name field",
+      "value": "{{firstName}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "First Name"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "e.g. Margaret"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 423,
+            "y": 275
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "element-visible",
+        "value": "#first-name"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 4,
+      "actionType": "input",
+      "description": "Last Name field",
+      "value": "{{lastName}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Last Name"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "e.g. Thornton"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 739,
+            "y": 275
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 5,
+      "actionType": "input",
+      "description": "Date of Birth field",
+      "value": "{{dateOfBirth}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Date of Birth"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 423,
+            "y": 345
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "element-visible",
+        "value": "#dob"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 6,
+      "actionType": "input",
+      "description": "Gender select field",
+      "value": "{{gender}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Gender"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": "— Select —\n                      Male\n                      Female\n                      Non-binary\n"
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 739,
+            "y": 345
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 7,
+      "actionType": "input",
+      "description": "SSN (last 4) field",
+      "value": "{{ssnLast4}}",
+      "sensitive": true,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "SSN last 4"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "e.g. 4821"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 739,
+            "y": 414
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "element-visible",
+        "value": "input#ssn"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 8,
+      "actionType": "input",
+      "description": "Phone Number field",
+      "value": "{{phoneNumber}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Phone Number"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "(617) 555-0000"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 423,
+            "y": 531
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 9,
+      "actionType": "input",
+      "description": "Home Address field",
+      "value": "{{homeAddress}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Home Address"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "14 Birchwood Drive, Boston, MA 02108"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 581,
+            "y": 429
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 10,
+      "actionType": "input",
+      "description": "Emergency Contact Name field",
+      "value": "{{emergencyContactName}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Emergency Contact Name"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "John Doe"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 423,
+            "y": 429
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 11,
+      "actionType": "input",
+      "description": "Emergency Contact Phone field",
+      "value": "{{emergencyContactPhone}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Emergency Contact Phone"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": "(617) 555-0001"
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": ""
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 739,
+            "y": 360
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 12,
+      "actionType": "input",
+      "description": "Insurance Provider field",
+      "value": "{{insuranceProvider}}",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Insurance Provider"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": "— Select Provider —\n                      BlueCross BlueShield\n                      Aetna\n         "
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 423.1640625,
+            "y": 520
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "url-contains",
+        "value": "/patient-form.html"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": []
+    },
+    {
+      "stepNumber": 13,
+      "actionType": "click",
+      "description": "Register Patient button",
+      "sensitive": false,
+      "elementData": {
+        "primary": {
+          "type": "aria-label",
+          "value": "Register Patient"
+        },
+        "secondary": {
+          "type": "placeholder",
+          "value": ""
+        },
+        "tertiary": {
+          "type": "text-content",
+          "value": "✓ Register Patient"
+        },
+        "fallback": {
+          "type": "coordinates",
+          "value": {
+            "x": 326,
+            "y": 679
+          }
+        }
+      },
+      "waitAfter": 200,
+      "maxRetries": 3,
+      "checkpoint": {
+        "type": "element-visible",
+        "value": "#success-alert"
+      },
+      "knownOutcomes": [],
+      "recoverableConditions": [],
+      "isMutating": true
+    }
+  ]
+}

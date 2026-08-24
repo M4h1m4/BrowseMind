@@ -2,6 +2,8 @@
 
 ## Running this
 
+**▶ [Watch the demo](https://drive.google.com/file/d/1jsOM1MZYgNHOOuCdk6b6ZUyALY_EkXL8/view?usp=sharing)** — capture, deterministic replay, and a human taking over a stuck run. Worth two minutes before reading the rest.
+
 Everything runs in Docker — the agent plus the two mock web apps it automates. No
 Node install, no live third-party services.
 

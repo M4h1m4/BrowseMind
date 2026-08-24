@@ -2,6 +2,8 @@
 
 A computer-use automation system that records LLM-driven browser sessions as reusable, deterministic capabilities and replays them against legacy web applications.
 
+**▶ [Watch the demo](https://drive.google.com/file/d/1jsOM1MZYgNHOOuCdk6b6ZUyALY_EkXL8/view?usp=sharing)** — capture, deterministic replay, and a human taking over a stuck run.
+
 ## What It Does
 
 BrowseMind bridges the gap between AI agents and legacy web applications that lack APIs. It operates in two phases:

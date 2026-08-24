@@ -1,0 +1,129 @@
+{
+  "runId": "6e01acd2-10a1-44f0-980a-c9f0419b3e20",
+  "type": "capture",
+  "tenantId": "default",
+  "goal": "Go to the patients tab, click the add new patient button and add these patients and click Register Patient button to submit.\n\n  1) First Name: \"William\", Last Name: \"Carter\", Date of Birth: \"1983-06-14\", Gender: \"Male\", SSN (last 4): \"4821\", Phone Number: \"(617) 555-3201\", Home Address: \"45 Beacon Street, Boston, MA 02108\", Emergency\n  Contact Name: \"Sarah Carter\", Emergency Contact Phone: \"(617) 555-3202\", Insurance Provider: \"Cigna\".\n\n  2) First Name: \"Elena\", Last Name: \"Vasquez\", Date of Birth: \"1975-11-28\", Gender: \"Female\", SSN (last 4): \"79\", Phone Number: \"(312) 555-8470\", Home Address: \"220 Michigan Avenue, Chicago, IL 60601\", Emergency\n  Contact Name: \"Marco Vasquez\", Emergency Contact Phone: \"(312) 555-8471\", Insurance Provider: \"BlueCross BlueShield\".",
+  "startedAt": "2026-08-23T20:55:42.715Z",
+  "status": "success",
+  "steps": [
+    {
+      "stepNumber": 1,
+      "startTime": "2026-08-23T20:55:57.041Z",
+      "endTime": "2026-08-23T20:55:57.041Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 2,
+      "startTime": "2026-08-23T20:56:09.393Z",
+      "endTime": "2026-08-23T20:56:09.393Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 3,
+      "startTime": "2026-08-23T20:56:21.887Z",
+      "endTime": "2026-08-23T20:56:21.887Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 4,
+      "startTime": "2026-08-23T20:56:33.834Z",
+      "endTime": "2026-08-23T20:56:33.834Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 5,
+      "startTime": "2026-08-23T20:56:45.759Z",
+      "endTime": "2026-08-23T20:56:45.759Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 6,
+      "startTime": "2026-08-23T20:56:57.823Z",
+      "endTime": "2026-08-23T20:56:57.823Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 7,
+      "startTime": "2026-08-23T20:57:10.245Z",
+      "endTime": "2026-08-23T20:57:10.245Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 8,
+      "startTime": "2026-08-23T20:57:23.031Z",
+      "endTime": "2026-08-23T20:57:23.031Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 9,
+      "startTime": "2026-08-23T20:57:37.446Z",
+      "endTime": "2026-08-23T20:57:37.446Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 10,
+      "startTime": "2026-08-23T20:57:50.690Z",
+      "endTime": "2026-08-23T20:57:50.690Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 11,
+      "startTime": "2026-08-23T20:58:04.138Z",
+      "endTime": "2026-08-23T20:58:04.138Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 12,
+      "startTime": "2026-08-23T20:58:15.917Z",
+      "endTime": "2026-08-23T20:58:15.917Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 13,
+      "startTime": "2026-08-23T20:58:27.701Z",
+      "endTime": "2026-08-23T20:58:27.701Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    }
+  ],
+  "artifactId": "0ce685a4-191f-434e-b7e2-e2139a23cd62",
+  "completedAt": "2026-08-23T20:58:28.217Z"
+}

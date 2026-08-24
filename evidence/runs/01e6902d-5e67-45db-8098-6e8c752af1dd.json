@@ -1,0 +1,167 @@
+{
+  "runId": "01e6902d-5e67-45db-8098-6e8c752af1dd",
+  "type": "replay",
+  "artifactId": "0ce685a4-191f-434e-b7e2-e2139a23cd62",
+  "tenantId": "default",
+  "goal": "Go to the patients tab, click the add new patient button and add these patients and click Register Patient button to submit.\n\n  1) First Name: \"William\", Last Name: \"Carter\", Date of Birth: \"1983-06-14\", Gender: \"Male\", SSN (last 4): \"4821\", Phone Number: \"(617) 555-3201\", Home Address: \"45 Beacon Street, Boston, MA 02108\", Emergency\n  Contact Name: \"Sarah Carter\", Emergency Contact Phone: \"(617) 555-3202\", Insurance Provider: \"Cigna\".\n\n  2) First Name: \"Elena\", Last Name: \"Vasquez\", Date of Birth: \"1975-11-28\", Gender: \"Female\", SSN (last 4): \"79\", Phone Number: \"(312) 555-8470\", Home Address: \"220 Michigan Avenue, Chicago, IL 60601\", Emergency\n  Contact Name: \"Marco Vasquez\", Emergency Contact Phone: \"(312) 555-8471\", Insurance Provider: \"BlueCross BlueShield\".",
+  "startedAt": "2026-08-23T20:58:28.306Z",
+  "status": "success",
+  "steps": [
+    {
+      "stepNumber": 1,
+      "stepPath": "1",
+      "startTime": "2026-08-23T20:58:28.845Z",
+      "endTime": "2026-08-23T20:58:29.244Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "tertiary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 2,
+      "stepPath": "2",
+      "startTime": "2026-08-23T20:58:29.244Z",
+      "endTime": "2026-08-23T20:58:29.659Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "tertiary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 3,
+      "stepPath": "3",
+      "startTime": "2026-08-23T20:58:29.660Z",
+      "endTime": "2026-08-23T20:58:30.038Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 4,
+      "stepPath": "4",
+      "startTime": "2026-08-23T20:58:30.038Z",
+      "endTime": "2026-08-23T20:58:30.387Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 5,
+      "stepPath": "5",
+      "startTime": "2026-08-23T20:58:30.387Z",
+      "endTime": "2026-08-23T20:58:30.728Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 6,
+      "stepPath": "6",
+      "startTime": "2026-08-23T20:58:30.728Z",
+      "endTime": "2026-08-23T20:58:31.076Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 7,
+      "stepPath": "7",
+      "startTime": "2026-08-23T20:58:31.076Z",
+      "endTime": "2026-08-23T20:58:31.428Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": true
+    },
+    {
+      "stepNumber": 8,
+      "stepPath": "8",
+      "startTime": "2026-08-23T20:58:31.428Z",
+      "endTime": "2026-08-23T20:58:31.774Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 9,
+      "stepPath": "9",
+      "startTime": "2026-08-23T20:58:31.774Z",
+      "endTime": "2026-08-23T20:58:32.116Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 10,
+      "stepPath": "10",
+      "startTime": "2026-08-23T20:58:32.117Z",
+      "endTime": "2026-08-23T20:58:32.464Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 11,
+      "stepPath": "11",
+      "startTime": "2026-08-23T20:58:32.465Z",
+      "endTime": "2026-08-23T20:58:32.810Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 12,
+      "stepPath": "12",
+      "startTime": "2026-08-23T20:58:32.810Z",
+      "endTime": "2026-08-23T20:58:33.146Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false
+    },
+    {
+      "stepNumber": 13,
+      "stepPath": "13",
+      "startTime": "2026-08-23T20:58:33.147Z",
+      "endTime": "2026-08-23T20:58:36.116Z",
+      "retryCount": 3,
+      "status": "failed",
+      "elementStrategyUsed": "primary",
+      "sensitive": false,
+      "errorDetails": "Checkpoint failed: element-visible — \"#success-alert\""
+    },
+    {
+      "stepNumber": 13,
+      "stepPath": "13",
+      "startTime": "2026-08-23T20:58:33.147Z",
+      "endTime": "2026-08-23T20:58:39.765Z",
+      "retryCount": 3,
+      "status": "stuck",
+      "elementStrategyUsed": "primary",
+      "sensitive": false,
+      "screenshotPath": "/evidence/screenshots/01e6902d-5e67-45db-8098-6e8c752af1dd-step13-before.png",
+      "afterScreenshotPath": "/evidence/screenshots/01e6902d-5e67-45db-8098-6e8c752af1dd-step13-after.png",
+      "errorDetails": "Checkpoint failed: element-visible — \"#success-alert\""
+    },
+    {
+      "stepNumber": 13,
+      "stepPath": "13",
+      "startTime": "2026-08-23T20:58:39.765Z",
+      "endTime": "2026-08-23T20:58:41.117Z",
+      "retryCount": 0,
+      "status": "success",
+      "elementStrategyUsed": "primary",
+      "sensitive": false,
+      "pageStateAfter": "{\"url\":\"http://localhost:4300/patient-form.html\",\"title\":\"Add New Patient — MediTrack\",\"alerts\":[\"✅ Patient Elena Vasquez has been registered successfully! Patient ID P038 has been assigned. View All Patients →\"]}"
+    }
+  ],
+  "completedAt": "2026-08-23T20:58:41.117Z"
+}

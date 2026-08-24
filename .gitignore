@@ -2,9 +2,22 @@ node_modules/
 dist/
 .env
 
-# Runtime database and run evidence — regenerated locally, not committed for now
+# SQLite files are regenerated on first run and are binary — never committed.
 db/
-evidence/
+*.db
+*.db-shm
+*.db-wal
+
+# Evidence IS a deliverable: a saved artifact plus the discovery and replay run
+# logs that produced and consumed it. Committed deliberately, and kept small —
+# it is a demonstration, not an archive. Screenshots are kept only for runs that
+# escalated, since those are what show a handoff actually happening.
+#
+# The test suite writes fixture artifacts here as a side effect — "Test goal"
+# against tenant-001 and friends. The named ones are excluded below, but the
+# suite also emits UUID-named fixtures indistinguishable from a real capture, so
+# stage evidence files individually rather than adding the directory wholesale.
+evidence/artifacts/artifact-*.json
 
 # Local planning notes, by name — a blanket *.md rule would also swallow
 # REPORT.md and KNOWN_LIMITATIONS.md, which belong in the repo.
